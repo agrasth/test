@@ -1,12 +1,12 @@
-template:true
+
 valuesFilePath: ./values.yaml
 
 resources:
-  -name: myFirstRepo
-  type: GitRepo
-  configuration: 
-    gitProvider: {{.Values.myRepo.gitProvider}}
-    path: {{.Values.myRepo.gitProvider}}
+  - name: myFirstRepo
+    type: GitRepo
+    configuration: 
+      gitProvider: {{.Values.myRepo.gitProvider}}
+      path: {{.Values.myRepo.gitProvider}}
   - name: propertyBag
     type: propertyBag
     configuration:
@@ -15,23 +15,23 @@ resources:
       foo2: bar
 
 pipelines:
-  -name: pipeline_scheduled_triggers
-  steps: 
-    -name: step_1
-    type: Bash
-    configuration: 
-      inputResources: 
-        -name: myFirstRepo 
-    execution:
-      onExecute:
-        -printenv
-  -name: pipeline_scheduled_triggers2
-  steps: 
-    -name: step_2
-    type: Bash
-    configuration: 
-      inputResources:
-        -name: myFirstRepo
-    execution:
-      onExecute:
-        -printenv
+  - name: pipeline_scheduled_triggers
+    steps: 
+      - name: step_1
+        type: Bash
+        configuration: 
+          inputResources: 
+            - name: myFirstRepo 
+        execution:
+          onExecute:
+            - printenv
+  - name: pipeline_scheduled_triggers2
+    steps: 
+      - name: step_2
+        type: Bash
+        configuration: 
+          inputResources:
+            - name: myFirstRepo
+        execution:
+          onExecute:
+            - printenv
