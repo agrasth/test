@@ -1,4 +1,3 @@
-
 valuesFilePath: ./values.yaml
 
 resources:
@@ -6,7 +5,7 @@ resources:
     type: GitRepo
     configuration: 
       gitProvider: {{.Values.myRepo.gitProvider}}
-      path: {{.Values.myRepo.gitProvider}}
+      path: {{.Values.myRepo.path}}
   - name: propertyBag
     type: propertyBag
     configuration:
