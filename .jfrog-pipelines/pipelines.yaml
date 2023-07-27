@@ -30,7 +30,7 @@ pipelines:
     -name: step_2
     type: Bash
     configuration: 
-      inputResources: `
+      inputResources:
         -name: myFirstRepo
     execution:
       onExecute:
