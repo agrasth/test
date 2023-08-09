@@ -1,0 +1,11 @@
+pipelines:
+  - name: jenkins_test
+    steps:
+
+          
+    - name: jfrog_jenkins_pipelines
+      type: Jenkins
+      configuration:
+        jenkinsJobName: testPipeline
+        integrations:
+          - name: TestPipline1
