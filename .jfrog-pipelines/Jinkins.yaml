@@ -8,4 +8,4 @@ pipelines:
       configuration:
         jenkinsJobName: testPipeline
         integrations:
-          - name: TestPipline1
+          - name: testpipelie1708
