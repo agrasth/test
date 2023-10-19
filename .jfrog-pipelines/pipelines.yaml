@@ -23,7 +23,8 @@ pipelines:
             - name: myFirstRepo 
         execution:
           onExecute:
-            - printenv
+            # - printenv
+            - curl --location 'https://jenkins-pipeline.jfrogdev.org/' --header 'Authorization: Basic YWRtaW46ZThsMDBaUHRkd051' --header 'Cookie: JSESSIONID.19b1c615=node0ho4hykgzqypqb6gw8ase7n13806.node0'
   - name: pipeline_scheduled_triggers2
     steps: 
       - name: step_2
