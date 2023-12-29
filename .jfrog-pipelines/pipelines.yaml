@@ -1,37 +1,37 @@
-valuesFilePath: ./values.yaml
+# valuesFilePath: ./values.yaml
 
-resources:
-  - name: myFirstRepo
-    type: GitRepo
-    configuration: 
-      gitProvider: {{.Values.myRepo.gitProvider}}
-      path: {{.Values.myRepo.path}}
-  - name: propertyBag
-    type: propertyBag
-    configuration:
-      foo: bar
-      foo1: bar
-      foo2: bar
+# resources:
+#   - name: myFirstRepo
+#     type: GitRepo
+#     configuration: 
+#       gitProvider: {{.Values.myRepo.gitProvider}}
+#       path: {{.Values.myRepo.path}}
+#   - name: propertyBag
+#     type: propertyBag
+#     configuration:
+#       foo: bar
+#       foo1: bar
+#       foo2: bar
 
-pipelines:
-  - name: pipeline_scheduled_triggers
-    steps: 
-      - name: step_1
-        type: Bash
-        configuration: 
-          inputResources: 
-            - name: myFirstRepo 
-        execution:
-          onExecute:
-            # - printenv
-            - curl --location 'https://jenkins-pipeline.jfrogdev.org/' --header 'Authorization: Basic YWRtaW46ZThsMDBaUHRkd051' --header 'Cookie: JSESSIONID.19b1c615=node0ho4hykgzqypqb6gw8ase7n13806.node0'
-  - name: pipeline_scheduled_triggers2
-    steps: 
-      - name: step_2
-        type: Bash
-        configuration: 
-          inputResources:
-            - name: myFirstRepo
-        execution:
-          onExecute:
-            - printenv
+# pipelines:
+#   - name: pipeline_scheduled_triggers
+#     steps: 
+#       - name: step_1
+#         type: Bash
+#         configuration: 
+#           inputResources: 
+#             - name: myFirstRepo 
+#         execution:
+#           onExecute:
+#             # - printenv
+#             - curl --location 'https://jenkins-pipeline.jfrogdev.org/' --header 'Authorization: Basic YWRtaW46ZThsMDBaUHRkd051' --header 'Cookie: JSESSIONID.19b1c615=node0ho4hykgzqypqb6gw8ase7n13806.node0'
+#   - name: pipeline_scheduled_triggers2
+#     steps: 
+#       - name: step_2
+#         type: Bash
+#         configuration: 
+#           inputResources:
+#             - name: myFirstRepo
+#         execution:
+#           onExecute:
+#             - printenv
