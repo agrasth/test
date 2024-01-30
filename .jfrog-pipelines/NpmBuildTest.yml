@@ -5,6 +5,7 @@ resources:
     type: GitRepo
     configuration:
       gitProvider: s_pipeAutoSCM
+      path: agrasth/test
 
 
 pipelines:
