@@ -6,9 +6,7 @@ resources:
     type: GitRepo
     configuration:
       gitProvider: s_pipeAutoSCM
-      path: {{ .Values.GitHub.Org_test_Automation_bash.path }}
-      branches:
-        include: {{gitBranch}}
+
 
 pipelines:
   - name: pipeline_S_NpmPublish_5933_007
