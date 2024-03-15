@@ -1,10 +1,8 @@
-pipeline:
-  name: my-pipeline
-
-  configuration:
-    affinityGroup: build_steps  # Name of the affinity group
-
-  steps:
+pipelines:
+  - name: jenkins_test
+    configuration:
+      affinityGroup: build_steps  # Name of the affinity group
+    steps:
     - name: build_step1
       # type: script   # You can replace 'script' with other JFrog pipeline step types
       # script: echo "This is the first build step"
@@ -14,7 +12,7 @@ pipeline:
       
 
     - name: build_step2
-      type: script
+      # type: script
       execution:
         onStart:
           - echo "This is the second build step"
