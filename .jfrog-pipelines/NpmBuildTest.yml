@@ -4,7 +4,7 @@ pipelines:
       affinityGroup: build_steps  # Name of the affinity group
     steps:
     - name: build_step1
-      type: script   # You can replace 'script' with other JFrog pipeline step types
+      type: Matrix   # You can replace 'script' with other JFrog pipeline step types
       # script: echo "This is the first build step"
       execution:
         onStart:
@@ -12,7 +12,7 @@ pipelines:
       
 
     - name: build_step2
-      type: script
+      type: Matrix
       execution:
         onStart:
           - echo "This is the second build step"
