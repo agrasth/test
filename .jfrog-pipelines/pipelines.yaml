@@ -5,7 +5,6 @@ pipelines:
         type: Matrix
         stepMode: Bash
         configuration:
-          concurrency: 5
           timeoutSeconds: 14400 
         stepletMultipliers:
           environmentVariables:
