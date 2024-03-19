@@ -1,5 +1,5 @@
 pipelines:
-  - name: Matrix_Single_Pipeline
+  - name: multiNode_Pipeline
     steps:
       - name: matrix_example
         type: Matrix
