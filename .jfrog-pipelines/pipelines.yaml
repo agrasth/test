@@ -6,7 +6,7 @@ pipelines:
         stepMode: Bash
         configuration:
           concurrency: 5
-          timeoutSeconds: 14400 
+          # timeoutSeconds: 14400 
         stepletMultipliers:
           environmentVariables:
             - count: 1
