@@ -4,8 +4,8 @@ pipelines:
       - name: matrix_example
         type: Matrix
         stepMode: Bash
-        configuration:
-          timeoutSeconds: 14400 
+        # configuration:
+        #   timeoutSeconds: 14400 
         stepletMultipliers:
           environmentVariables:
             - count: 1
