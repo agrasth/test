@@ -1,5 +1,5 @@
 pipelines:
-  - name: affinityGroup_pipeline
+  - name:affinityGroup_pipeline
     configuration:
       affinityGroup: build_steps  # Name of the affinity group
     steps:
