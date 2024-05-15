@@ -1,35 +1,35 @@
-template: true
+# template: true
 
-resources:
-  - name: S_NpmPublish_5933_007_GitRepo
-    type: GitRepo
-    configuration:
-      gitProvider: s_pipeAutoSCM
-      path: agrasth/test
+# resources:
+#   - name: S_NpmPublish_5933_007_GitRepo
+#     type: GitRepo
+#     configuration:
+#       gitProvider: s_pipeAutoSCM
+#       path: agrasth/test
 
 
-pipelines:
-  - name: pipeline_S_NpmPublish_5933_007
-    configuration:
-      jfrogCliVersion: 2
-    steps:
-      - name: S_NpmPublish_5933_007_1
-        type: NpmBuild
-        configuration:
-          inputResources:
-            - name: S_NpmPublish_5933_007_GitRepo
-          integrations:
-            - name: s_artifactory
-          sourceLocation: "tests/npm"
-          repositoryName: test-automation-npm-remote
-        execution:
-          onStart:
-            - replace_envs ${res_S_NpmPublish_5933_007_GitRepo_resourcePath}/tests/npm/package.json
-      - name: S_NpmPublish_5933_007_2
-        type: NpmPublish
-        configuration:
-          repositoryName: test-automation-npm-local
-          inputSteps:
-            - name: S_NpmPublish_5933_007_1
-          integrations:
-            - name: s_artifactory
+# pipelines:
+#   - name: pipeline_S_NpmPublish_5933_007
+#     configuration:
+#       jfrogCliVersion: 2
+#     steps:
+#       - name: S_NpmPublish_5933_007_1
+#         type: NpmBuild
+#         configuration:
+#           inputResources:
+#             - name: S_NpmPublish_5933_007_GitRepo
+#           integrations:
+#             - name: s_artifactory
+#           sourceLocation: "tests/npm"
+#           repositoryName: test-automation-npm-remote
+#         execution:
+#           onStart:
+#             - replace_envs ${res_S_NpmPublish_5933_007_GitRepo_resourcePath}/tests/npm/package.json
+#       - name: S_NpmPublish_5933_007_2
+#         type: NpmPublish
+#         configuration:
+#           repositoryName: test-automation-npm-local
+#           inputSteps:
+#             - name: S_NpmPublish_5933_007_1
+#           integrations:
+#             - name: s_artifactory
