@@ -1,23 +1,23 @@
-pipelines:
-  - name:affinityGroup_pipeline
-    configuration:
-      affinityGroup: build_steps  # Name of the affinity group
-    steps:
-    - name: build_step1
-      type: Bash   # You can replace 'script' with other JFrog pipeline step types
-      # script: echo "This is the first build step"
-      execution:
-        onStart:
-          - echo "This is the first build step"
+# pipelines:
+#   - name:affinityGroup_pipeline
+#     configuration:
+#       affinityGroup: build_steps  # Name of the affinity group
+#     steps:
+#     - name: build_step1
+#       type: Bash   # You can replace 'script' with other JFrog pipeline step types
+#       # script: echo "This is the first build step"
+#       execution:
+#         onStart:
+#           - echo "This is the first build step"
       
 
-    - name: build_step2
-      type: Bash
-      configuration:
-        inputSteps:
-          - name: build_step1
-      execution:
-        onStart:
-          - echo "This is the second build step"
+#     - name: build_step2
+#       type: Bash
+#       configuration:
+#         inputSteps:
+#           - name: build_step1
+#       execution:
+#         onStart:
+#           - echo "This is the second build step"
 
 
