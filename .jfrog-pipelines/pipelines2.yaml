@@ -463,7 +463,6 @@ pipelines:
         - clam_complete || echo "[ERROR] on_complete returned an error"
         - stepCommons_on_complete
 
-{{ if eq "master" "{{gitBranch}}" }}
   postRun:
     configuration:
       integrations:
