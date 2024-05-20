@@ -1,472 +1,472 @@
-template: true
-valuesFilePath: ./values.yml
+# template: true
+# valuesFilePath: ./values.yml
 
-git_resource_trigger_condition: &git_resource_trigger_condition
-  {{ if or ( hasPrefix "release" "{{gitBranch}}" ) ( hasPrefix "milestone" "{{gitBranch}}" ) ( hasPrefix "preRelease" "{{gitBranch}}" ) }}
-  trigger: false
-  {{ else }}
-  trigger: true
-  {{ end }}
-pipelines:
-- name: observability_build
-  # CI_PIPELINE_URL=https://entplus.jfrog.io/ui/pipelines/myPipelines/observability?branch=${GIT_BRANCH_URLENCODED}
-  configuration:
-    integrations:
-      - name: jfdev_agent
-      - name: entplus_deployer
-      - name: entplus_pipelines
-      - name: entplus_ci_jfrogdev_org
-      - name: entplus_jfrog_io_docker
-      - name: docker_jfrog_io_reader
-      - name: slack_dev_foundation_alerts
-      - name: slack_platform_clean_pipeline
-      - name: slack_platform_release_pipeline
-      - name: slack_jfconnect_pipe
-      - name: sonar_jfrog_info
-      - name: art_jfrog_io
-      - name: jira_jfrog
-      - name: security_xray_access_token
-    environmentVariables:
-      readOnly:
-        GOSUMDB: off
-        GOPRIVATE: jfrog.com
-        GONOPROXY: none
-        JFROG_CLI_TEMP_DIR: /tmp
-        CI: "true"
-        GO_VERSION: "1.22.3"
-        MAVEN_OPTS: "'-Dorg.slf4j.simpleLogger.showDateTime=true -Dorg.slf4j.simpleLogger.dateTimeFormat=HH:mm:ss,SSS -Dmaven.wagon.http.pool=false'"
-        MAVEN_CONFIG: "'-B -nsu -e'"
-        SLACK_MAIN_INTEGRATION: slack_platform_clean_pipeline
-        SLACK_RELEASE_INTEGRATION: slack_platform_release_pipeline
-        SLACK_JFDEV_AGENT_INTEGRATION: jfdev_agent
-        GIT_LFS_SKIP_SMUDGE: 1
-  steps:
-  - name: trigger_all
-    type: Bash
-    configuration:
-      inputResources:
-        - name: observability_master_nightly_build_cron_trigger
-    execution:
-      onStart:
-        - if [[ "${FORCE_RUN}" == true ]]; then add_run_variables FORCE_RUN="true" >/dev/null 2>&1; fi
-      onExecute:
-        - echo "Starting full pipeline run."
+# git_resource_trigger_condition: &git_resource_trigger_condition
+#   {{ if or ( hasPrefix "release" "{{gitBranch}}" ) ( hasPrefix "milestone" "{{gitBranch}}" ) ( hasPrefix "preRelease" "{{gitBranch}}" ) }}
+#   trigger: false
+#   {{ else }}
+#   trigger: true
+#   {{ end }}
+# pipelines:
+# - name: observability_build
+#   # CI_PIPELINE_URL=https://entplus.jfrog.io/ui/pipelines/myPipelines/observability?branch=${GIT_BRANCH_URLENCODED}
+#   configuration:
+#     integrations:
+#       - name: jfdev_agent
+#       - name: entplus_deployer
+#       - name: entplus_pipelines
+#       - name: entplus_ci_jfrogdev_org
+#       - name: entplus_jfrog_io_docker
+#       - name: docker_jfrog_io_reader
+#       - name: slack_dev_foundation_alerts
+#       - name: slack_platform_clean_pipeline
+#       - name: slack_platform_release_pipeline
+#       - name: slack_jfconnect_pipe
+#       - name: sonar_jfrog_info
+#       - name: art_jfrog_io
+#       - name: jira_jfrog
+#       - name: security_xray_access_token
+#     environmentVariables:
+#       readOnly:
+#         GOSUMDB: off
+#         GOPRIVATE: jfrog.com
+#         GONOPROXY: none
+#         JFROG_CLI_TEMP_DIR: /tmp
+#         CI: "true"
+#         GO_VERSION: "1.22.3"
+#         MAVEN_OPTS: "'-Dorg.slf4j.simpleLogger.showDateTime=true -Dorg.slf4j.simpleLogger.dateTimeFormat=HH:mm:ss,SSS -Dmaven.wagon.http.pool=false'"
+#         MAVEN_CONFIG: "'-B -nsu -e'"
+#         SLACK_MAIN_INTEGRATION: slack_platform_clean_pipeline
+#         SLACK_RELEASE_INTEGRATION: slack_platform_release_pipeline
+#         SLACK_JFDEV_AGENT_INTEGRATION: jfdev_agent
+#         GIT_LFS_SKIP_SMUDGE: 1
+#   steps:
+#   - name: trigger_all
+#     type: Bash
+#     configuration:
+#       inputResources:
+#         - name: observability_master_nightly_build_cron_trigger
+#     execution:
+#       onStart:
+#         - if [[ "${FORCE_RUN}" == true ]]; then add_run_variables FORCE_RUN="true" >/dev/null 2>&1; fi
+#       onExecute:
+#         - echo "Starting full pipeline run."
 
-  - name: observability_build
-    type: Bash
-    configuration:
-      runtime:
-        type: image
-        image:
-          auto:
-            language: go
-            versions:
-              - "1.18"
-      affinityGroup: sonar_observability
-      inputSteps:
-        - name: trigger_all
-      inputResources:
-        - name: observability_bitbucket
-          <<: *git_resource_trigger_condition
-      outputResources:
-        - name: observability_build_info
-    execution:
-      onStart:
-        - task: {{ .Values.setupStepCommonsTaskVersion }}
-          input:
-            JFDEV_CI_COMMONS_DEFAULT_VERSION: {{ .Values.jfdevCiCommonsDefaultVersion }}
-            PROJECT_ROOT_DIR: "${res_observability_bitbucket_resourcePath}"
-          id: setup_step_commons
-        - source "${res_observability_bitbucket_resourcePath}/${OUT_setup_step_commons_PIPE_STEP_COMMONS_PATH}"
-        - stepCommons_load_script service/build/ci/pipelines_build.sh
-        - on_start
-      onExecute:
-        - on_execute
-      onSuccess:
-        - on_success
-        - stepCommons_on_success --step-status-group=critical_path
-      onFailure:
-        - stepCommons_on_failure --step-status-group=critical_path
-      onComplete:
-        - stepCommons_pre_on_complete
-        - on_complete || echo "[ERROR] on_complete returned an error"
-        - stepCommons_on_complete
+#   - name: observability_build
+#     type: Bash
+#     configuration:
+#       runtime:
+#         type: image
+#         image:
+#           auto:
+#             language: go
+#             versions:
+#               - "1.18"
+#       affinityGroup: sonar_observability
+#       inputSteps:
+#         - name: trigger_all
+#       inputResources:
+#         - name: observability_bitbucket
+#           <<: *git_resource_trigger_condition
+#       outputResources:
+#         - name: observability_build_info
+#     execution:
+#       onStart:
+#         - task: {{ .Values.setupStepCommonsTaskVersion }}
+#           input:
+#             JFDEV_CI_COMMONS_DEFAULT_VERSION: {{ .Values.jfdevCiCommonsDefaultVersion }}
+#             PROJECT_ROOT_DIR: "${res_observability_bitbucket_resourcePath}"
+#           id: setup_step_commons
+#         - source "${res_observability_bitbucket_resourcePath}/${OUT_setup_step_commons_PIPE_STEP_COMMONS_PATH}"
+#         - stepCommons_load_script service/build/ci/pipelines_build.sh
+#         - on_start
+#       onExecute:
+#         - on_execute
+#       onSuccess:
+#         - on_success
+#         - stepCommons_on_success --step-status-group=critical_path
+#       onFailure:
+#         - stepCommons_on_failure --step-status-group=critical_path
+#       onComplete:
+#         - stepCommons_pre_on_complete
+#         - on_complete || echo "[ERROR] on_complete returned an error"
+#         - stepCommons_on_complete
 
-  - name: observability_itest
-    type: Bash
-    configuration:
-      runtime:
-        type: image
-        image:
-          custom:
-            name: docker.bintray.io/jfrog/pipelines-u16go
-            tag: 1.13.7
-            options: --network="host"
-      inputResources:
-        - name: observability_bitbucket
-          <<: *git_resource_trigger_condition
-        - name: observability_build_info
-        - name: observability_arti_bundle_jfrog_io_docker_pro_image
-      outputResources:
-        - name: observability_post_release_step_property_bag
-      environmentVariables:
-        PRO_IMAGE_TAG: ${res_observability_arti_bundle_jfrog_io_docker_pro_image_imageTag}
-    execution:
-      onStart:
-        - add_run_variables RUN_TEST_SUITE="true"
-        - task: {{ .Values.setupStepCommonsTaskVersion }}
-          input:
-            JFDEV_CI_COMMONS_DEFAULT_VERSION: {{ .Values.jfdevCiCommonsDefaultVersion }}
-            PROJECT_ROOT_DIR: "${res_observability_bitbucket_resourcePath}"
-          id: setup_step_commons
-        - source "${res_observability_bitbucket_resourcePath}/${OUT_setup_step_commons_PIPE_STEP_COMMONS_PATH}"
-        - stepCommons_load_script service/build/ci/pipelines_itest.sh
-        - on_start
-      onExecute:
-        - on_execute
-      onSuccess:
-        - stepCommons_on_success
-      onFailure:
-        - stepCommons_on_failure
-      onComplete:
-        - stepCommons_pre_on_complete
-        - on_complete || echo "[ERROR] on_complete returned an error"
-        - stepCommons_on_complete
+#   - name: observability_itest
+#     type: Bash
+#     configuration:
+#       runtime:
+#         type: image
+#         image:
+#           custom:
+#             name: docker.bintray.io/jfrog/pipelines-u16go
+#             tag: 1.13.7
+#             options: --network="host"
+#       inputResources:
+#         - name: observability_bitbucket
+#           <<: *git_resource_trigger_condition
+#         - name: observability_build_info
+#         - name: observability_arti_bundle_jfrog_io_docker_pro_image
+#       outputResources:
+#         - name: observability_post_release_step_property_bag
+#       environmentVariables:
+#         PRO_IMAGE_TAG: ${res_observability_arti_bundle_jfrog_io_docker_pro_image_imageTag}
+#     execution:
+#       onStart:
+#         - add_run_variables RUN_TEST_SUITE="true"
+#         - task: {{ .Values.setupStepCommonsTaskVersion }}
+#           input:
+#             JFDEV_CI_COMMONS_DEFAULT_VERSION: {{ .Values.jfdevCiCommonsDefaultVersion }}
+#             PROJECT_ROOT_DIR: "${res_observability_bitbucket_resourcePath}"
+#           id: setup_step_commons
+#         - source "${res_observability_bitbucket_resourcePath}/${OUT_setup_step_commons_PIPE_STEP_COMMONS_PATH}"
+#         - stepCommons_load_script service/build/ci/pipelines_itest.sh
+#         - on_start
+#       onExecute:
+#         - on_execute
+#       onSuccess:
+#         - stepCommons_on_success
+#       onFailure:
+#         - stepCommons_on_failure
+#       onComplete:
+#         - stepCommons_pre_on_complete
+#         - on_complete || echo "[ERROR] on_complete returned an error"
+#         - stepCommons_on_complete
 
-  - name: observability_package_docker
-    type: Bash
-    configuration:
-      runtime:
-        type: host
-      nodePool: buildx
-      inputResources:
-        - name: observability_bitbucket
-          <<: *git_resource_trigger_condition
-        - name: observability_build_info
-      outputResources:
-        - name: observability_docker_build_info
-        - name: observability_entplus_jfrog_io_docker_image
-        - name: observability_post_release_step_property_bag
-    execution:
-      onStart:
-        - task: {{ .Values.setupStepCommonsTaskVersion }}
-          input:
-            JFDEV_CI_COMMONS_DEFAULT_VERSION: {{ .Values.jfdevCiCommonsDefaultVersion }}
-            PROJECT_ROOT_DIR: "${res_observability_bitbucket_resourcePath}"
-          id: setup_step_commons
-        - source "${res_observability_bitbucket_resourcePath}/${OUT_setup_step_commons_PIPE_STEP_COMMONS_PATH}"
-        - stepCommons_load_script service/build/ci/pipelines_package_docker.sh
-        - on_start
-      onExecute:
-        - on_execute
-      onSuccess:
-        - stepCommons_on_success
-        - on_success
-      onFailure:
-        - stepCommons_on_failure
-        - on_failure
-      onComplete:
-        - stepCommons_pre_on_complete
-        - on_complete || echo "[ERROR] on_complete returned an error"
-        - stepCommons_on_complete
+#   - name: observability_package_docker
+#     type: Bash
+#     configuration:
+#       runtime:
+#         type: host
+#       nodePool: buildx
+#       inputResources:
+#         - name: observability_bitbucket
+#           <<: *git_resource_trigger_condition
+#         - name: observability_build_info
+#       outputResources:
+#         - name: observability_docker_build_info
+#         - name: observability_entplus_jfrog_io_docker_image
+#         - name: observability_post_release_step_property_bag
+#     execution:
+#       onStart:
+#         - task: {{ .Values.setupStepCommonsTaskVersion }}
+#           input:
+#             JFDEV_CI_COMMONS_DEFAULT_VERSION: {{ .Values.jfdevCiCommonsDefaultVersion }}
+#             PROJECT_ROOT_DIR: "${res_observability_bitbucket_resourcePath}"
+#           id: setup_step_commons
+#         - source "${res_observability_bitbucket_resourcePath}/${OUT_setup_step_commons_PIPE_STEP_COMMONS_PATH}"
+#         - stepCommons_load_script service/build/ci/pipelines_package_docker.sh
+#         - on_start
+#       onExecute:
+#         - on_execute
+#       onSuccess:
+#         - stepCommons_on_success
+#         - on_success
+#       onFailure:
+#         - stepCommons_on_failure
+#         - on_failure
+#       onComplete:
+#         - stepCommons_pre_on_complete
+#         - on_complete || echo "[ERROR] on_complete returned an error"
+#         - stepCommons_on_complete
 
-  - name: observability_package_maven
-    type: MvnBuild
-    configuration:
-      #      priority: 1 TODO: Ignore until PIPE-2790 is fixed
-      sourceLocation: service/build/package/maven
-      configFileLocation: ../../../../build/ci/.conf
-      configFileName: maven-config
-      mvnCommand: install ${MAVEN_CONFIG}
-      inputResources:
-        - name: observability_bitbucket
-          <<: *git_resource_trigger_condition
-        - name: observability_build_info
-      outputResources:
-        - name: observability_maven_build_info
-        - name: observability_post_release_step_property_bag
-      runtime:
-        type: image
-        image:
-          auto:
-            language: java
-            versions:
-              - 8
-    execution:
-      onStart:
-        - task: {{ .Values.setupStepCommonsTaskVersion }}
-          input:
-            JFDEV_CI_COMMONS_DEFAULT_VERSION: {{ .Values.jfdevCiCommonsDefaultVersion }}
-            PROJECT_ROOT_DIR: "${res_observability_bitbucket_resourcePath}"
-          id: setup_step_commons
-        - source "${res_observability_bitbucket_resourcePath}/${OUT_setup_step_commons_PIPE_STEP_COMMONS_PATH}"
-        - stepCommons_load_script service/build/package/maven/build/ci/pipelines_build.sh
-        - on_start
-      onSuccess:
-        - stepCommons_on_success
-        - on_success
-      onFailure:
-        - stepCommons_on_failure
-      onComplete:
-        - stepCommons_pre_on_complete
-        - on_complete || echo "[ERROR] on_complete returned an error"
-        - stepCommons_on_complete
+#   - name: observability_package_maven
+#     type: MvnBuild
+#     configuration:
+#       #      priority: 1 TODO: Ignore until PIPE-2790 is fixed
+#       sourceLocation: service/build/package/maven
+#       configFileLocation: ../../../../build/ci/.conf
+#       configFileName: maven-config
+#       mvnCommand: install ${MAVEN_CONFIG}
+#       inputResources:
+#         - name: observability_bitbucket
+#           <<: *git_resource_trigger_condition
+#         - name: observability_build_info
+#       outputResources:
+#         - name: observability_maven_build_info
+#         - name: observability_post_release_step_property_bag
+#       runtime:
+#         type: image
+#         image:
+#           auto:
+#             language: java
+#             versions:
+#               - 8
+#     execution:
+#       onStart:
+#         - task: {{ .Values.setupStepCommonsTaskVersion }}
+#           input:
+#             JFDEV_CI_COMMONS_DEFAULT_VERSION: {{ .Values.jfdevCiCommonsDefaultVersion }}
+#             PROJECT_ROOT_DIR: "${res_observability_bitbucket_resourcePath}"
+#           id: setup_step_commons
+#         - source "${res_observability_bitbucket_resourcePath}/${OUT_setup_step_commons_PIPE_STEP_COMMONS_PATH}"
+#         - stepCommons_load_script service/build/package/maven/build/ci/pipelines_build.sh
+#         - on_start
+#       onSuccess:
+#         - stepCommons_on_success
+#         - on_success
+#       onFailure:
+#         - stepCommons_on_failure
+#       onComplete:
+#         - stepCommons_pre_on_complete
+#         - on_complete || echo "[ERROR] on_complete returned an error"
+#         - stepCommons_on_complete
 
-  - name: observability_artifactory_pro_package_docker
-    type: Bash
-    configuration:
-      runtime:
-        type: host
-      nodePool: buildx
-      inputResources:
-        - name: observability_bitbucket
-          <<: *git_resource_trigger_condition
-        - name: observability_build_info
-      outputResources:
-        - name: observability_arti_bundle_jfrog_io_docker_pro_image
-        - name: observability_post_release_step_property_bag
-        - name: artifactory_image
-    execution:
-      onStart:
-        - task: {{ .Values.setupStepCommonsTaskVersion }}
-          input:
-            JFDEV_CI_COMMONS_DEFAULT_VERSION: {{ .Values.jfdevCiCommonsDefaultVersion }}
-            PROJECT_ROOT_DIR: "${res_observability_bitbucket_resourcePath}"
-          id: setup_step_commons
-        - source "${res_observability_bitbucket_resourcePath}/${OUT_setup_step_commons_PIPE_STEP_COMMONS_PATH}"
-        - source "${res_observability_bitbucket_resourcePath}/service/build/package/artifactory-bundled-with-observability/artifactory-bundled-with-observability.sh"
-        - on_start
-      onExecute:
-        - on_execute
-      onSuccess:
-        - stepCommons_on_success
-      onFailure:
-        - stepCommons_on_failure
-      onComplete:
-        - stepCommons_pre_on_complete
-        - on_complete || echo "[ERROR] on_complete returned an error"
-        - stepCommons_on_complete
-        - check_trigger_condition || echo "[ERROR] check_trigger_condition returned an error"
+#   - name: observability_artifactory_pro_package_docker
+#     type: Bash
+#     configuration:
+#       runtime:
+#         type: host
+#       nodePool: buildx
+#       inputResources:
+#         - name: observability_bitbucket
+#           <<: *git_resource_trigger_condition
+#         - name: observability_build_info
+#       outputResources:
+#         - name: observability_arti_bundle_jfrog_io_docker_pro_image
+#         - name: observability_post_release_step_property_bag
+#         - name: artifactory_image
+#     execution:
+#       onStart:
+#         - task: {{ .Values.setupStepCommonsTaskVersion }}
+#           input:
+#             JFDEV_CI_COMMONS_DEFAULT_VERSION: {{ .Values.jfdevCiCommonsDefaultVersion }}
+#             PROJECT_ROOT_DIR: "${res_observability_bitbucket_resourcePath}"
+#           id: setup_step_commons
+#         - source "${res_observability_bitbucket_resourcePath}/${OUT_setup_step_commons_PIPE_STEP_COMMONS_PATH}"
+#         - source "${res_observability_bitbucket_resourcePath}/service/build/package/artifactory-bundled-with-observability/artifactory-bundled-with-observability.sh"
+#         - on_start
+#       onExecute:
+#         - on_execute
+#       onSuccess:
+#         - stepCommons_on_success
+#       onFailure:
+#         - stepCommons_on_failure
+#       onComplete:
+#         - stepCommons_pre_on_complete
+#         - on_complete || echo "[ERROR] on_complete returned an error"
+#         - stepCommons_on_complete
+#         - check_trigger_condition || echo "[ERROR] check_trigger_condition returned an error"
 
-  - name: observability_artifactory_online_package_docker
-    type: Bash
-    configuration:
-      runtime:
-        type: host
-      nodePool: buildx
-      inputResources:
-        - name: observability_bitbucket
-          <<: *git_resource_trigger_condition
-        - name: observability_build_info
-      outputResources:
-        - name: observability_arti_bundle_jfrog_io_docker_online_image
-        - name: observability_post_release_step_property_bag
-        - name: artifactory_image
-    execution:
-      onStart:
-        - task: {{ .Values.setupStepCommonsTaskVersion }}
-          input:
-            JFDEV_CI_COMMONS_DEFAULT_VERSION: {{ .Values.jfdevCiCommonsDefaultVersion }}
-            PROJECT_ROOT_DIR: "${res_observability_bitbucket_resourcePath}"
-          id: setup_step_commons
-        - source "${res_observability_bitbucket_resourcePath}/${OUT_setup_step_commons_PIPE_STEP_COMMONS_PATH}"
-        - source "${res_observability_bitbucket_resourcePath}/service/build/package/artifactory-bundled-with-observability/artifactory-bundled-with-observability.sh"
-        - on_start
-      onExecute:
-        - on_execute "online"
-      onSuccess:
-        - stepCommons_on_success
-      onFailure:
-        - stepCommons_on_failure
-      onComplete:
-        - stepCommons_pre_on_complete
-        - on_complete || echo "[ERROR] on_complete returned an error"
-        - stepCommons_on_complete
-        - check_trigger_condition || echo "[ERROR] check_trigger_condition returned an error"
+#   - name: observability_artifactory_online_package_docker
+#     type: Bash
+#     configuration:
+#       runtime:
+#         type: host
+#       nodePool: buildx
+#       inputResources:
+#         - name: observability_bitbucket
+#           <<: *git_resource_trigger_condition
+#         - name: observability_build_info
+#       outputResources:
+#         - name: observability_arti_bundle_jfrog_io_docker_online_image
+#         - name: observability_post_release_step_property_bag
+#         - name: artifactory_image
+#     execution:
+#       onStart:
+#         - task: {{ .Values.setupStepCommonsTaskVersion }}
+#           input:
+#             JFDEV_CI_COMMONS_DEFAULT_VERSION: {{ .Values.jfdevCiCommonsDefaultVersion }}
+#             PROJECT_ROOT_DIR: "${res_observability_bitbucket_resourcePath}"
+#           id: setup_step_commons
+#         - source "${res_observability_bitbucket_resourcePath}/${OUT_setup_step_commons_PIPE_STEP_COMMONS_PATH}"
+#         - source "${res_observability_bitbucket_resourcePath}/service/build/package/artifactory-bundled-with-observability/artifactory-bundled-with-observability.sh"
+#         - on_start
+#       onExecute:
+#         - on_execute "online"
+#       onSuccess:
+#         - stepCommons_on_success
+#       onFailure:
+#         - stepCommons_on_failure
+#       onComplete:
+#         - stepCommons_pre_on_complete
+#         - on_complete || echo "[ERROR] on_complete returned an error"
+#         - stepCommons_on_complete
+#         - check_trigger_condition || echo "[ERROR] check_trigger_condition returned an error"
 
-  - name: observability_sonar_scan
-    type: Bash
-    configuration:
-      affinityGroup: sonar_observability
-      inputSteps:
-        - name: observability_build
-      inputResources:
-        - name: observability_bitbucket
-          trigger: false
-      outputResources:
-        - name: observability_post_release_step_property_bag
-      environmentVariables:
-        SONAR_PROJECT_KEY: 'observability'
-        SONAR_PROJECT_BASE_DIR: './service/'
-        SONAR_QUALITYGATE_WAIT: 'false'
-      runtime:
-        type: image
-        image:
-          custom:
-            registry: entplus_jfrog_io_docker
-            sourceRepository: docker-staging-local
-            name: entplus.jfrog.io/docker-staging-local/sonar-scanner
-            tag: ${SONAR_DOCKER_TAG:-latest}
-    execution:
-      onStart:
-        - add_run_variables RUN_SONAR="true"
-        - task: {{ .Values.setupStepCommonsTaskVersion }}
-          input:
-            JFDEV_CI_COMMONS_DEFAULT_VERSION: {{ .Values.jfdevCiCommonsDefaultVersion }}
-            PROJECT_ROOT_DIR: "${res_observability_bitbucket_resourcePath}"
-          id: setup_step_commons
-        - source "${res_observability_bitbucket_resourcePath}/${OUT_setup_step_commons_PIPE_STEP_COMMONS_PATH}"
-        - stepCommons_load_script service/build/ci/pipelines_sonar_go.sh
-        - on_start
-      onExecute:
-        - on_execute
-      onSuccess:
-        - stepCommons_on_success
-      onFailure:
-        - stepCommons_on_failure
-      onComplete:
-        - stepCommons_pre_on_complete
-        - stepCommons_on_complete
+#   - name: observability_sonar_scan
+#     type: Bash
+#     configuration:
+#       affinityGroup: sonar_observability
+#       inputSteps:
+#         - name: observability_build
+#       inputResources:
+#         - name: observability_bitbucket
+#           trigger: false
+#       outputResources:
+#         - name: observability_post_release_step_property_bag
+#       environmentVariables:
+#         SONAR_PROJECT_KEY: 'observability'
+#         SONAR_PROJECT_BASE_DIR: './service/'
+#         SONAR_QUALITYGATE_WAIT: 'false'
+#       runtime:
+#         type: image
+#         image:
+#           custom:
+#             registry: entplus_jfrog_io_docker
+#             sourceRepository: docker-staging-local
+#             name: entplus.jfrog.io/docker-staging-local/sonar-scanner
+#             tag: ${SONAR_DOCKER_TAG:-latest}
+#     execution:
+#       onStart:
+#         - add_run_variables RUN_SONAR="true"
+#         - task: {{ .Values.setupStepCommonsTaskVersion }}
+#           input:
+#             JFDEV_CI_COMMONS_DEFAULT_VERSION: {{ .Values.jfdevCiCommonsDefaultVersion }}
+#             PROJECT_ROOT_DIR: "${res_observability_bitbucket_resourcePath}"
+#           id: setup_step_commons
+#         - source "${res_observability_bitbucket_resourcePath}/${OUT_setup_step_commons_PIPE_STEP_COMMONS_PATH}"
+#         - stepCommons_load_script service/build/ci/pipelines_sonar_go.sh
+#         - on_start
+#       onExecute:
+#         - on_execute
+#       onSuccess:
+#         - stepCommons_on_success
+#       onFailure:
+#         - stepCommons_on_failure
+#       onComplete:
+#         - stepCommons_pre_on_complete
+#         - stepCommons_on_complete
 
-    ## SERVICE E2ETEST
-  - name: trigger_observability_e2e
-    type: TriggerPipeline
-    configuration:
-      timeoutSeconds: 10800
-      environmentVariables:
-        ARTIFACTORY_PRO_IMAGE_TAG:
-          default: "${res_observability_arti_bundle_jfrog_io_docker_pro_image_imageTag}"
-          description: "[MANDATORY]: Field to determine the Artifactory Pro bundled version for testing"
-          allowCustom: true
-        ARTIFACTORY_ONLINE_IMAGE_TAG:
-          default: "${res_observability_arti_bundle_jfrog_io_docker_online_image_imageTag}"
-          description: "[MANDATORY]: Field to determine the Artifactory Online bundled version for testing"
-          allowCustom: true
-        ARTIFACTORY_CHART_VERSION:
-          default: "10${res_artifactory_image_latestArtifactoryRelease}"
-          description: "[MANDATORY]: Field to determine the Artifactory-Product chart version"
-          allowCustom: true
-      inputResources:
-        - name: observability_arti_bundle_jfrog_io_docker_pro_image
-        - name: observability_arti_bundle_jfrog_io_docker_online_image
-        - name: observability_entplus_jfrog_io_docker_image
-        - name: observability_bitbucket
-        - name: artifactory_image
-        - name: trigger_e2e_check_bag
-          newVersionOnly: true
-      pipelineName: observability_e2e
-      stepName: trigger_all
-      branchName: {{gitBranch}}
-      projectKey: jfob
-      outputResources:
-        - name: observability_post_release_step_property_bag
-    execution:
-      onStart:
-        - |
-          if [[ "${SKIP_E2E}" == true ]]; then
-            echo "[INFO] Skipping the following pipeline, SKIP_E2E flag is set to 'true'"
-            exit 0
-          fi
-        - echo "Triggering observability_e2e pipeline"
-        - set_trigger_payload pipelineVariables ARTIFACTORY_PRO_IMAGE_TAG="${res_observability_arti_bundle_jfrog_io_docker_pro_image_imageTag}" ARTIFACTORY_ONLINE_IMAGE_TAG="${res_observability_arti_bundle_jfrog_io_docker_online_image_imageTag}" ARTIFACTORY_CHART_VERSION="10${res_artifactory_image_latestArtifactoryRelease}"
-        - export pipelines_poll_interval_seconds=30
-      onSuccess:
-        - on_success || echo "[ERROR] on_success returned an error"
-        - stepCommons_on_success || echo "[ERROR] stepCommons_on_success returned an error"
-      onFailure:
-        - on_failure || echo "[ERROR] on_failure returned an error"
-        - stepCommons_on_failure || echo "[ERROR] stepCommons_on_failure returned an error"
-      onComplete:
-        - stepCommons_pre_on_complete || echo "[ERROR] stepCommons_pre_on_complete returned an error"
-        - on_complete || echo "[ERROR] on_complete returned an error"
-        - stepCommons_on_complete || echo "[ERROR] stepCommons_on_complete returned an error"
+#     ## SERVICE E2ETEST
+#   - name: trigger_observability_e2e
+#     type: TriggerPipeline
+#     configuration:
+#       timeoutSeconds: 10800
+#       environmentVariables:
+#         ARTIFACTORY_PRO_IMAGE_TAG:
+#           default: "${res_observability_arti_bundle_jfrog_io_docker_pro_image_imageTag}"
+#           description: "[MANDATORY]: Field to determine the Artifactory Pro bundled version for testing"
+#           allowCustom: true
+#         ARTIFACTORY_ONLINE_IMAGE_TAG:
+#           default: "${res_observability_arti_bundle_jfrog_io_docker_online_image_imageTag}"
+#           description: "[MANDATORY]: Field to determine the Artifactory Online bundled version for testing"
+#           allowCustom: true
+#         ARTIFACTORY_CHART_VERSION:
+#           default: "10${res_artifactory_image_latestArtifactoryRelease}"
+#           description: "[MANDATORY]: Field to determine the Artifactory-Product chart version"
+#           allowCustom: true
+#       inputResources:
+#         - name: observability_arti_bundle_jfrog_io_docker_pro_image
+#         - name: observability_arti_bundle_jfrog_io_docker_online_image
+#         - name: observability_entplus_jfrog_io_docker_image
+#         - name: observability_bitbucket
+#         - name: artifactory_image
+#         - name: trigger_e2e_check_bag
+#           newVersionOnly: true
+#       pipelineName: observability_e2e
+#       stepName: trigger_all
+#       branchName: {{gitBranch}}
+#       projectKey: jfob
+#       outputResources:
+#         - name: observability_post_release_step_property_bag
+#     execution:
+#       onStart:
+#         - |
+#           if [[ "${SKIP_E2E}" == true ]]; then
+#             echo "[INFO] Skipping the following pipeline, SKIP_E2E flag is set to 'true'"
+#             exit 0
+#           fi
+#         - echo "Triggering observability_e2e pipeline"
+#         - set_trigger_payload pipelineVariables ARTIFACTORY_PRO_IMAGE_TAG="${res_observability_arti_bundle_jfrog_io_docker_pro_image_imageTag}" ARTIFACTORY_ONLINE_IMAGE_TAG="${res_observability_arti_bundle_jfrog_io_docker_online_image_imageTag}" ARTIFACTORY_CHART_VERSION="10${res_artifactory_image_latestArtifactoryRelease}"
+#         - export pipelines_poll_interval_seconds=30
+#       onSuccess:
+#         - on_success || echo "[ERROR] on_success returned an error"
+#         - stepCommons_on_success || echo "[ERROR] stepCommons_on_success returned an error"
+#       onFailure:
+#         - on_failure || echo "[ERROR] on_failure returned an error"
+#         - stepCommons_on_failure || echo "[ERROR] stepCommons_on_failure returned an error"
+#       onComplete:
+#         - stepCommons_pre_on_complete || echo "[ERROR] stepCommons_pre_on_complete returned an error"
+#         - on_complete || echo "[ERROR] on_complete returned an error"
+#         - stepCommons_on_complete || echo "[ERROR] stepCommons_on_complete returned an error"
 
-  - name: trigger_post_release
-    type: Bash
-    configuration:
-      inputResources:
-        - name: observability_post_release_step_property_bag
-        - name: observability_bitbucket
-          trigger: false
-      outputResources:
-        - name: observability_release_bitbucket
-    execution:
-      onStart:
-        - task: {{ .Values.setupStepCommonsTaskVersion }}
-          input:
-            JFDEV_CI_COMMONS_DEFAULT_VERSION: {{ .Values.jfdevCiCommonsDefaultVersion }}
-            PROJECT_ROOT_DIR: "${res_observability_bitbucket_resourcePath}"
-          id: setup_step_commons
-        - source "${res_observability_bitbucket_resourcePath}/${OUT_setup_step_commons_PIPE_STEP_COMMONS_PATH}"
-        - stepCommons_load_script build/ci/scripts/trigger_post_release_pipeline.sh
-        - on_start
-      onExecute:
-        - on_execute
+#   - name: trigger_post_release
+#     type: Bash
+#     configuration:
+#       inputResources:
+#         - name: observability_post_release_step_property_bag
+#         - name: observability_bitbucket
+#           trigger: false
+#       outputResources:
+#         - name: observability_release_bitbucket
+#     execution:
+#       onStart:
+#         - task: {{ .Values.setupStepCommonsTaskVersion }}
+#           input:
+#             JFDEV_CI_COMMONS_DEFAULT_VERSION: {{ .Values.jfdevCiCommonsDefaultVersion }}
+#             PROJECT_ROOT_DIR: "${res_observability_bitbucket_resourcePath}"
+#           id: setup_step_commons
+#         - source "${res_observability_bitbucket_resourcePath}/${OUT_setup_step_commons_PIPE_STEP_COMMONS_PATH}"
+#         - stepCommons_load_script build/ci/scripts/trigger_post_release_pipeline.sh
+#         - on_start
+#       onExecute:
+#         - on_execute
 
-  - name: observability_docker_security_scan
-    type: XrayScan
-    configuration:
-      failOnScan: {{ hasPrefix "milestone/" "{{gitBranch}}" }}
-      inputSteps:
-        - name: observability_package_docker
-      inputResources:
-        - name: observability_build_info
-        - name: observability_bitbucket
-          trigger: false
-      outputResources:
-        - name: observability_post_release_step_property_bag
-    execution:
-      onStart:
-        - task: {{ .Values.setupStepCommonsTaskVersion }}
-          input:
-            JFDEV_CI_COMMONS_DEFAULT_VERSION: {{ .Values.jfdevCiCommonsDefaultVersion }}
-            PROJECT_ROOT_DIR: "${res_observability_bitbucket_resourcePath}"
-          id: setup_step_commons
-        - source "${res_observability_bitbucket_resourcePath}/${OUT_setup_step_commons_PIPE_STEP_COMMONS_PATH}"
-        - stepCommons_load_script build/ci/observability_security_scan.sh
-        - xrayScan_on_start
-      onSuccess:
-        - stepCommons_on_success
-      onFailure:
-        - stepCommons_on_failure
-      onComplete:
-        - stepCommons_pre_on_complete
-        - run_violation_handler ${res_observability_build_info_buildName} ${res_observability_build_info_buildNumber}
-        - stepCommons_on_complete
+#   - name: observability_docker_security_scan
+#     type: XrayScan
+#     configuration:
+#       failOnScan: {{ hasPrefix "milestone/" "{{gitBranch}}" }}
+#       inputSteps:
+#         - name: observability_package_docker
+#       inputResources:
+#         - name: observability_build_info
+#         - name: observability_bitbucket
+#           trigger: false
+#       outputResources:
+#         - name: observability_post_release_step_property_bag
+#     execution:
+#       onStart:
+#         - task: {{ .Values.setupStepCommonsTaskVersion }}
+#           input:
+#             JFDEV_CI_COMMONS_DEFAULT_VERSION: {{ .Values.jfdevCiCommonsDefaultVersion }}
+#             PROJECT_ROOT_DIR: "${res_observability_bitbucket_resourcePath}"
+#           id: setup_step_commons
+#         - source "${res_observability_bitbucket_resourcePath}/${OUT_setup_step_commons_PIPE_STEP_COMMONS_PATH}"
+#         - stepCommons_load_script build/ci/observability_security_scan.sh
+#         - xrayScan_on_start
+#       onSuccess:
+#         - stepCommons_on_success
+#       onFailure:
+#         - stepCommons_on_failure
+#       onComplete:
+#         - stepCommons_pre_on_complete
+#         - run_violation_handler ${res_observability_build_info_buildName} ${res_observability_build_info_buildNumber}
+#         - stepCommons_on_complete
 
-  - name: observability_clamscan
-    type: Bash
-    configuration:
-      inputResources:
-        - name: observability_entplus_jfrog_io_docker_image
-        - name: observability_bitbucket
-          trigger: false
-      outputResources:
-        - name: observability_post_release_step_property_bag
-    execution:
-      onStart:
-        - task: {{ .Values.setupStepCommonsTaskVersion }}
-          input:
-            JFDEV_CI_COMMONS_DEFAULT_VERSION: {{ .Values.jfdevCiCommonsDefaultVersion }}
-            PROJECT_ROOT_DIR: "${res_observability_bitbucket_resourcePath}"
-          id: setup_step_commons
-        - source "${res_observability_bitbucket_resourcePath}/${OUT_setup_step_commons_PIPE_STEP_COMMONS_PATH}"
-        - stepCommons_load_script service/build/ci/pipelines_clamav.sh
-      onExecute:
-        - clam_execute
-      onSuccess:
-        - stepCommons_on_success
-      onFailure:
-        - stepCommons_on_failure
-      onComplete:
-        - stepCommons_pre_on_complete
-        - clam_complete || echo "[ERROR] on_complete returned an error"
-        - stepCommons_on_complete
+#   - name: observability_clamscan
+#     type: Bash
+#     configuration:
+#       inputResources:
+#         - name: observability_entplus_jfrog_io_docker_image
+#         - name: observability_bitbucket
+#           trigger: false
+#       outputResources:
+#         - name: observability_post_release_step_property_bag
+#     execution:
+#       onStart:
+#         - task: {{ .Values.setupStepCommonsTaskVersion }}
+#           input:
+#             JFDEV_CI_COMMONS_DEFAULT_VERSION: {{ .Values.jfdevCiCommonsDefaultVersion }}
+#             PROJECT_ROOT_DIR: "${res_observability_bitbucket_resourcePath}"
+#           id: setup_step_commons
+#         - source "${res_observability_bitbucket_resourcePath}/${OUT_setup_step_commons_PIPE_STEP_COMMONS_PATH}"
+#         - stepCommons_load_script service/build/ci/pipelines_clamav.sh
+#       onExecute:
+#         - clam_execute
+#       onSuccess:
+#         - stepCommons_on_success
+#       onFailure:
+#         - stepCommons_on_failure
+#       onComplete:
+#         - stepCommons_pre_on_complete
+#         - clam_complete || echo "[ERROR] on_complete returned an error"
+#         - stepCommons_on_complete
 
-  postRun:
-    configuration:
-      integrations:
-        - name: slack_observability_int
-    execution:
-      onFailure:
-        - send_notification slack_observability_int --text "Test"
+#   postRun:
+#     configuration:
+#       integrations:
+#         - name: slack_observability_int
+#     execution:
+#       onFailure:
+#         - send_notification slack_observability_int --text "Test"
