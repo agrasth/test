@@ -1,227 +1,228 @@
-name: Saas_Platform_Services_Cache_And_Distribute
-configuration:
-  outputResources:
-    - name: port_io_webhook
-  jfrogCliVersion: 2
-  integrations:
-    - name: devops_auto_bitbucket
-    - name: devops_platform_services_notifications_slack
-    - name: pipelines_read_access
-    - name: port_io
-  environmentVariables:
-    readOnly:
-      APPLICATION:
-        description: Application to cache
-        default: ''
-        values:
-          - ''
-          - port-ocean-jira
-          - port-ocean-argocd
-          - port-ocean-opsgenie
-          - port-ocean-pagerduty
-          - port-ocean-sonarqube
-          - port-ocean-newrelic
-          - port-ocean-jenkins
-          - port-agent
-          - port-k8s-exporter
-          - devlake
-          - falco
-          - flow-sensor
-          - gatekeeper
-          - keda
-          - kube-prometheus-stack
-          - kubernetes-event-exporter
-          - logstash
-          - opentelemetry-operator
-          - thanos
-          - wiz-kubernetes-connector
-          - x509-certificate-exporter
-        allowCustom: true
-      CHART_VERSION:
-        description: Application Helm chart version
-        default: ''
-        values:
-          - ''
-        allowCustom: true
-steps:
-  - name: step_1_prep_env
-    type: Bash
-    configuration:
-      affinityGroup: cacheDistributeGroupPlatServ
-      inputResources:
-        - name: saas_helm_values_platform_services
-          trigger: false
-    execution:
-      onStart:
-        - |
-          if [ -z "${APPLICATION}" ] || [ -z "${CHART_VERSION}" ]; then
-            echo "APPLICATION and CHART_VERSION cannot be empty"
-            exit 1
-          fi
-        - 'echo "Build node external IP $(curl -s https://ifconfig.me)"'
-      onExecute:
-        - add_run_variables BUILD_NUMBER=$((run_number +3000))
-        - 'echo "Build number ${BUILD_NUMBER}"'
-        - >-
-          add_run_variables
-          SET_TRIGGERED_BY="${step_triggered_by_identity_name}"
-        - >-
-          eval "$(ssh-agent -s)" && chmod -R 600 ~/.ssh/* && ssh-add
-          ~/.ssh/pipelines_read_access
-        - echo "Getting latest platform-services-scripts version"
-        - >-
-          git clone
-          ssh://git@git.jfrog.info/devops-platform/platform-services-scripts.git
-        - cd platform-services-scripts/
-        - git checkout master && git branch && git status
-        - >-
-          add_run_variables PLATFORM_SERVICES_SCRIPTS_VERSION="$(git tag | grep
-          "^1." | sort -t . -k 3 -g | tac | head -n1)"
-        - >-
-          echo "platform-services-scripts version:
-          ${PLATFORM_SERVICES_SCRIPTS_VERSION}"
-      onSuccess:
-        - 'echo "${pipeline_name} started by user ${SET_TRIGGERED_BY}"'
-        - 'echo "Application=[${APPLICATION}]"'
-        - 'echo "Helm chart version=[${CHART_VERSION}]"'
-        - >-
-          jsonPayload="{\"runNumber\":\"$run_number\",
-          \"stepName\":\"$step_name\"}"
-        - set_payload port_io_webhook "$jsonPayload"
-      onFailure:
-        - >-
-          send_notification devops_platform_services_notifications_slack --text
-          "${pipeline_name} failed \n Step=[${step_name}] \n Run
-          URL=${step_url}]"
-        - >-
-          jsonPayload="{\"runNumber\":\"$run_number\",
-          \"stepName\":\"$step_name\"}"
-        - set_payload port_io_webhook "$jsonPayload"
-  - name: step_2_cache
-    type: Bash
-    configuration:
-      affinityGroup: cacheDistributeGroupPlatServ
-      runtime:
-        type: image
-        image:
-          custom:
-            registry: entplus
-            name: >-
-              entplus.jfrog.io/devops-docker/jfrog/devops/platform-services-scripts
-            tag: '${PLATFORM_SERVICES_SCRIPTS_VERSION}'
-            autoPull: true
-            options: '--entrypoint=""'
-      inputSteps:
-        - name: step_1_prep_env
-      integrations:
-        - name: entplus
-        - name: devops_auto_entplus_jpd_token
-        - name: jfrog_saas_deployer_edges
-      outputResources:
-        - name: cd_jenkins_job_build_params
-      environmentVariables:
-        LC_ALL: C.UTF-8
-        LANG: C.UTF-8
-        DOCKER_CLI_EXPERIMENTAL: enabled
-        REPO_USER: '${int_entplus_username}'
-        REPO_PASS: '${int_entplus_password}'
-        EDGES_USER: '${int_jfrog_saas_deployer_edges_user}'
-        EDGES_PASS: '${int_jfrog_saas_deployer_edges_password}'
-    execution:
-      onStart:
-        - >-
-          echo "Going to cache and distribute Helm chart version
-          ${CHART_VERSION} for ${APPLICATION}"
-      onExecute:
-        - |
-          echo "Docker version:"
-          docker version
-        - jfrog c rm devops_auto_entplus --quiet || true
-        - >-
-          jfrog c add devops_auto_entplus --artifactory-url
-          https://entplus.jfrog.io/artifactory --access-token
-          ${int_devops_auto_entplus_jpd_token_accessToken} --interactive=false
-        - cd /opt/jfrog/platform-services
-        - >-
-          python3 bin/repo21/cache_and_distribute_cli.py --chart_name
-          ${APPLICATION} --chart_version ${CHART_VERSION}
-          --edges_jenkins_pipe=true
-        - add_run_variables CHARTS_LIST=$(cat workdir/helm_list)
-        - add_run_variables IMAGES_LIST="$(cat workdir/docker_list)"
-        - >-
-          jsonPayload="{\"runNumber\":\"$run_number\",
-          \"stepName\":\"$step_name\"}"
-        - set_payload port_io_webhook "$jsonPayload"
-      onSuccess:
-        - |
-          if [ -z "${CHARTS_LIST}" ] && [ -z "${IMAGES_LIST}" ]; then
-              echo "No charts and images to distribute"
-              exit 0
-          else
-              echo "Charts list:"
-              echo "${CHARTS_LIST}"
-              echo "Images list:"
-              echo "${IMAGES_LIST}"
-              # Read from the IMAGES_LIST environment variable
-              counter=1
-              while IFS= read -r line
-              do
-                add_run_variables IMAGE_$counter=$line
-                ((counter++))
-              done <<< "$IMAGES_LIST"
-              write_output cd_jenkins_job_build_params startStep="$(head /dev/urandom | tr -dc a-z0-9 | head -c 10)"
-          fi
-      onFailure:
-        - >-
-          send_notification devops_platform_services_notifications_slack --text
-          "${pipeline_name} failed \n Application=[${APPLICATION}] \n Helm chart
-          version=[${CHART_VERSION}] \n Step=[${step_name}] \n Run
-          URL=[${step_url}]"
-  - name: step_3_distribute
-    type: Jenkins
-    configuration:
-      jenkinsJobName: platform/release/cloud-edges-dependencies-distribution
-      buildParameters:
-        CHARTS: '${CHARTS_LIST}'
-        SKIP_DEPENDENCIES: 'true'
-        DISTRIBUTE_IMAGES: ''
-        IMAGES: |
-          ${IMAGE_1}
-          ${IMAGE_2}
-          ${IMAGE_3}
-          ${IMAGE_4}
-          ${IMAGE_5}
-          ${IMAGE_6}
-          ${IMAGE_7}
-          ${IMAGE_8}
-          ${IMAGE_9}
-          ${IMAGE_10}
-          ${IMAGE_11}
-          ${IMAGE_12}
-          ${IMAGE_13}
-          ${IMAGE_14}
-          ${IMAGE_15}
-      inputResources:
-        - name: cd_jenkins_job_build_params
-          newVersionOnly: true
-          trigger: true
-      integrations:
-        - name: devops_jenkins_entplus_ci
-      inputSteps:
-        - name: step_2_cache
-  - name: step_4_slack_notification
-    type: Bash
-    configuration:
-      inputSteps:
-        - name: step_3_distribute
-    execution:
-      onExecute:
-        - >-
-          send_notification devops_platform_services_notifications_slack --text
-          "${pipeline_name} \n Application=[${APPLICATION}] \n Helm chart
-          version=[${CHART_VERSION}] \n was sucessfully distributed to Edges \n
-          Step=[${step_name}] \n Run URL=[${step_url}]"
-        - >-
-          jsonPayload="{\"runNumber\":\"$run_number\",
-          \"stepName\":\"$step_name\"}"
-        - set_payload port_io_webhook "$jsonPayload"
+pipelines:
+  name: Saas_Platform_Services_Cache_And_Distribute
+  configuration:
+    outputResources:
+      - name: port_io_webhook
+    jfrogCliVersion: 2
+    integrations:
+      - name: devops_auto_bitbucket
+      - name: devops_platform_services_notifications_slack
+      - name: pipelines_read_access
+      - name: port_io
+    environmentVariables:
+      readOnly:
+        APPLICATION:
+          description: Application to cache
+          default: ''
+          values:
+            - ''
+            - port-ocean-jira
+            - port-ocean-argocd
+            - port-ocean-opsgenie
+            - port-ocean-pagerduty
+            - port-ocean-sonarqube
+            - port-ocean-newrelic
+            - port-ocean-jenkins
+            - port-agent
+            - port-k8s-exporter
+            - devlake
+            - falco
+            - flow-sensor
+            - gatekeeper
+            - keda
+            - kube-prometheus-stack
+            - kubernetes-event-exporter
+            - logstash
+            - opentelemetry-operator
+            - thanos
+            - wiz-kubernetes-connector
+            - x509-certificate-exporter
+          allowCustom: true
+        CHART_VERSION:
+          description: Application Helm chart version
+          default: ''
+          values:
+            - ''
+          allowCustom: true
+  steps:
+    - name: step_1_prep_env
+      type: Bash
+      configuration:
+        affinityGroup: cacheDistributeGroupPlatServ
+        inputResources:
+          - name: saas_helm_values_platform_services
+            trigger: false
+      execution:
+        onStart:
+          - |
+            if [ -z "${APPLICATION}" ] || [ -z "${CHART_VERSION}" ]; then
+              echo "APPLICATION and CHART_VERSION cannot be empty"
+              exit 1
+            fi
+          - 'echo "Build node external IP $(curl -s https://ifconfig.me)"'
+        onExecute:
+          - add_run_variables BUILD_NUMBER=$((run_number +3000))
+          - 'echo "Build number ${BUILD_NUMBER}"'
+          - >-
+            add_run_variables
+            SET_TRIGGERED_BY="${step_triggered_by_identity_name}"
+          - >-
+            eval "$(ssh-agent -s)" && chmod -R 600 ~/.ssh/* && ssh-add
+            ~/.ssh/pipelines_read_access
+          - echo "Getting latest platform-services-scripts version"
+          - >-
+            git clone
+            ssh://git@git.jfrog.info/devops-platform/platform-services-scripts.git
+          - cd platform-services-scripts/
+          - git checkout master && git branch && git status
+          - >-
+            add_run_variables PLATFORM_SERVICES_SCRIPTS_VERSION="$(git tag | grep
+            "^1." | sort -t . -k 3 -g | tac | head -n1)"
+          - >-
+            echo "platform-services-scripts version:
+            ${PLATFORM_SERVICES_SCRIPTS_VERSION}"
+        onSuccess:
+          - 'echo "${pipeline_name} started by user ${SET_TRIGGERED_BY}"'
+          - 'echo "Application=[${APPLICATION}]"'
+          - 'echo "Helm chart version=[${CHART_VERSION}]"'
+          - >-
+            jsonPayload="{\"runNumber\":\"$run_number\",
+            \"stepName\":\"$step_name\"}"
+          - set_payload port_io_webhook "$jsonPayload"
+        onFailure:
+          - >-
+            send_notification devops_platform_services_notifications_slack --text
+            "${pipeline_name} failed \n Step=[${step_name}] \n Run
+            URL=${step_url}]"
+          - >-
+            jsonPayload="{\"runNumber\":\"$run_number\",
+            \"stepName\":\"$step_name\"}"
+          - set_payload port_io_webhook "$jsonPayload"
+    - name: step_2_cache
+      type: Bash
+      configuration:
+        affinityGroup: cacheDistributeGroupPlatServ
+        runtime:
+          type: image
+          image:
+            custom:
+              registry: entplus
+              name: >-
+                entplus.jfrog.io/devops-docker/jfrog/devops/platform-services-scripts
+              tag: '${PLATFORM_SERVICES_SCRIPTS_VERSION}'
+              autoPull: true
+              options: '--entrypoint=""'
+        inputSteps:
+          - name: step_1_prep_env
+        integrations:
+          - name: entplus
+          - name: devops_auto_entplus_jpd_token
+          - name: jfrog_saas_deployer_edges
+        outputResources:
+          - name: cd_jenkins_job_build_params
+        environmentVariables:
+          LC_ALL: C.UTF-8
+          LANG: C.UTF-8
+          DOCKER_CLI_EXPERIMENTAL: enabled
+          REPO_USER: '${int_entplus_username}'
+          REPO_PASS: '${int_entplus_password}'
+          EDGES_USER: '${int_jfrog_saas_deployer_edges_user}'
+          EDGES_PASS: '${int_jfrog_saas_deployer_edges_password}'
+      execution:
+        onStart:
+          - >-
+            echo "Going to cache and distribute Helm chart version
+            ${CHART_VERSION} for ${APPLICATION}"
+        onExecute:
+          - |
+            echo "Docker version:"
+            docker version
+          - jfrog c rm devops_auto_entplus --quiet || true
+          - >-
+            jfrog c add devops_auto_entplus --artifactory-url
+            https://entplus.jfrog.io/artifactory --access-token
+            ${int_devops_auto_entplus_jpd_token_accessToken} --interactive=false
+          - cd /opt/jfrog/platform-services
+          - >-
+            python3 bin/repo21/cache_and_distribute_cli.py --chart_name
+            ${APPLICATION} --chart_version ${CHART_VERSION}
+            --edges_jenkins_pipe=true
+          - add_run_variables CHARTS_LIST=$(cat workdir/helm_list)
+          - add_run_variables IMAGES_LIST="$(cat workdir/docker_list)"
+          - >-
+            jsonPayload="{\"runNumber\":\"$run_number\",
+            \"stepName\":\"$step_name\"}"
+          - set_payload port_io_webhook "$jsonPayload"
+        onSuccess:
+          - |
+            if [ -z "${CHARTS_LIST}" ] && [ -z "${IMAGES_LIST}" ]; then
+                echo "No charts and images to distribute"
+                exit 0
+            else
+                echo "Charts list:"
+                echo "${CHARTS_LIST}"
+                echo "Images list:"
+                echo "${IMAGES_LIST}"
+                # Read from the IMAGES_LIST environment variable
+                counter=1
+                while IFS= read -r line
+                do
+                  add_run_variables IMAGE_$counter=$line
+                  ((counter++))
+                done <<< "$IMAGES_LIST"
+                write_output cd_jenkins_job_build_params startStep="$(head /dev/urandom | tr -dc a-z0-9 | head -c 10)"
+            fi
+        onFailure:
+          - >-
+            send_notification devops_platform_services_notifications_slack --text
+            "${pipeline_name} failed \n Application=[${APPLICATION}] \n Helm chart
+            version=[${CHART_VERSION}] \n Step=[${step_name}] \n Run
+            URL=[${step_url}]"
+    - name: step_3_distribute
+      type: Jenkins
+      configuration:
+        jenkinsJobName: platform/release/cloud-edges-dependencies-distribution
+        buildParameters:
+          CHARTS: '${CHARTS_LIST}'
+          SKIP_DEPENDENCIES: 'true'
+          DISTRIBUTE_IMAGES: ''
+          IMAGES: |
+            ${IMAGE_1}
+            ${IMAGE_2}
+            ${IMAGE_3}
+            ${IMAGE_4}
+            ${IMAGE_5}
+            ${IMAGE_6}
+            ${IMAGE_7}
+            ${IMAGE_8}
+            ${IMAGE_9}
+            ${IMAGE_10}
+            ${IMAGE_11}
+            ${IMAGE_12}
+            ${IMAGE_13}
+            ${IMAGE_14}
+            ${IMAGE_15}
+        inputResources:
+          - name: cd_jenkins_job_build_params
+            newVersionOnly: true
+            trigger: true
+        integrations:
+          - name: devops_jenkins_entplus_ci
+        inputSteps:
+          - name: step_2_cache
+    - name: step_4_slack_notification
+      type: Bash
+      configuration:
+        inputSteps:
+          - name: step_3_distribute
+      execution:
+        onExecute:
+          - >-
+            send_notification devops_platform_services_notifications_slack --text
+            "${pipeline_name} \n Application=[${APPLICATION}] \n Helm chart
+            version=[${CHART_VERSION}] \n was sucessfully distributed to Edges \n
+            Step=[${step_name}] \n Run URL=[${step_url}]"
+          - >-
+            jsonPayload="{\"runNumber\":\"$run_number\",
+            \"stepName\":\"$step_name\"}"
+          - set_payload port_io_webhook "$jsonPayload"
