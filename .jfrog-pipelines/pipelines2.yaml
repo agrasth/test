@@ -1,5 +1,5 @@
 pipelines:
-  - name: my_pipeline
+  - name: my_pipeline1234567
     configuration:
       environmentVariables:
         readOnly:
