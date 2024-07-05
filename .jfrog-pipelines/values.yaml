@@ -3,7 +3,7 @@
 #   path: agrasth/test
 OurRepoInfo:
   GitResourceName: "BeepGitResource"
-   gitProvider: agrasth
+  gitProvider: agrasth
   path: agrasth/test
   Branch: "main"
 
