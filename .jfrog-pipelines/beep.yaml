@@ -1,4 +1,3 @@
-
 template:
   namespace: beep
   name: BesJavaDockerTemplate
