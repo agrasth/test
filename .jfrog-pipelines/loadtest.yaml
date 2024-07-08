@@ -1,5 +1,5 @@
 template: true
-valuesFilePath: ./values.yml
+valuesFilePath: ./values.yaml
 resources:
 {{- range untilStep 0 500 1 }}
 - name: propertyBagV{{ . }}
