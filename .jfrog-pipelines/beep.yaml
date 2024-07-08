@@ -1,280 +1,280 @@
-template:
-  namespace: beep
-  name: BesJavaDockerTemplate
-  version: 1.0.3
-  development: false
+# template:
+#   namespace: beep
+#   name: BesJavaDockerTemplate
+#   version: 1.0.3
+#   development: false
 
-#All the values used in this file will come from the below yaml file.
-valuesFilePath: ./values.yml
+# #All the values used in this file will come from the below yaml file.
+# valuesFilePath: ./values.yml
 
-resources:
-  #Github connections information
-  - name: '{{.Values.OurRepoInfo.GitResourceName | default "BeepGitResource"}}'
-    type: GitRepo
-    configuration:
-      gitProvider: '{{.Values.OurRepoInfo.GitProvider}}'
-      path: '{{.Values.OurRepoInfo.Path}}'
-      branches:
-        include: '{{.Values.OurRepoInfo.Branch}}'
-      buildOn:
-        pullRequestCreate: false
-      files:
-        exclude: ^(.jfrog-pipelines\/.+|.github\/.+)
-    # Docker image in an Artifactory dev repository. This is the image built and tagged with latest.
-  - name: '{{.Values.OurImageInfo.Latest | default "ImageLatestTagResource"}}'
-    type: Image
-    configuration:
-      registry: '{{.Values.OurImageInfo.ArtifactoryIntegration | default "BeepArtifactory"}}'
-      sourceRepository: '{{.Values.OurImageInfo.BesRepository}}'
-      imageName: '{{.Values.OurImageInfo.ArtifactoryUrl}}/{{.Values.OurImageInfo.BesRepository}}/{{.Values.OurImageInfo.ContainerName}}'
-      imageTag: latest
-      autoPull: true
-  # Build information for the image built
-  - name: '{{.Values.ThisBuildInfo.BesBuildInfo | default "BesBuildInfoResource"}}'
-    type: BuildInfo
-    configuration:
-      sourceArtifactory: '{{.Values.OurImageInfo.ArtifactoryIntegration | default "BeepArtifactory"}}'
-      buildName: '{{.Values.ThisPipeline.ContainerBuildStepName}}'
-pipelines:
-  - name: '{{.Values.ThisPipeline.PipelineName | default "BESJavaDockerPipeline"}}'
-    steps:
-      # Sets the version
-      # Input Resource :
-      #                  Our Github repo
-      # Integrations :
-      #                 Artifactory
-      #                 Slack
-      # Affinity : docker_group   (this assures we can perform actions across steps in the same instances)
-      # Notifications for build failures are sent to slack.
-      - name: '{{.Values.ThisPipeline.VersionStep | default "VersionStep"}}'
-        type: Bash
-        configuration:
-          affinityGroup: docker_group
-          inputResources:
-            - name: '{{.Values.OurRepoInfo.GitResourceName | default "BeepGitResource"}}'
-          integrations:
-            - name: '{{.Values.OurImageInfo.ArtifactoryIntegration | default "BeepArtifactory"}}'
-            - name: '{{.Values.ThisPipeline.SlackNotification| default "Slack_Failures"}}'
-          runtime:
-            type: image
-            image:
-              custom:
-                name: ridebeep.jfrog.io/dev-docker-local/beep_ojdk11_ojdk17_npm18_py3_cyp
-                tag: "1.6"
-                registry: '{{.Values.OurImageInfo.ArtifactoryIntegration | default "BeepArtifactory"}}'
-                sourceRepository: dev-docker-local
-        execution:
-          onExecute:
-            - cd $res_{{.Values.OurRepoInfo.GitResourceName }}_resourcePath
-            - ver=`cat VERSION`
-            - beepversion="${ver}.${JFROG_CLI_BUILD_NUMBER}"
-            - add_run_variables VERSION_NUMBER=${beepversion}
-            - add_run_variables buildNumber=${beepversion}
-            - add_run_variables JFROG_CLI_BUILD_NUMBER=${beepversion}
-            - add_run_variables buildName=${JFROG_CLI_BUILD_NAME}
-          onFailure:
-            - send_notification {{.Values.ThisPipeline.SlackNotification | default "Slack_Failures"}}
-            - jfrog rt dl --flat bdip-generic-local/pipelines_artifacts/UserCommitSlackAlert.py ./UserCommitSlackAlert.py
-            - jfrog rt dl --flat bdip-generic-local/pipelines_artifacts/requirements.txt ./requirements.txt
-            - pip3 install -r requirements.txt
-            - python3 UserCommitSlackAlert.py {{.Values.OurImageInfo.ContainerName}}
-      # Builds the code and runs tests.
-      # Input Resource :
-      #                  Our Github repo
-      # Integrations :
-      #                 Artifactory
-      #                 Slack
-      # Affinity : docker_group   (this assures we can perform actions across steps in the same instances)
-      # Notifications for build failures are sent to slack.
-      - name: '{{.Values.ThisPipeline.CodeBuildStepName | default "JavaBuildStep"}}'
-        type: Bash
-        configuration:
-          affinityGroup: docker_group
-          runtime:
-            type: image
-            image:
-              custom:
-                name: ridebeep.jfrog.io/dev-docker-local/beep_ojdk11_ojdk17_npm18_py3_cyp
-                tag: "1.6"
-                registry: '{{.Values.OurImageInfo.ArtifactoryIntegration | default "BeepArtifactory"}}'
-                sourceRepository: dev-docker-local
-          environmentVariables:
-            SONAR_TOKEN: 71ac423b2adb00e247dab02d619a4bdc2c3423db
-          inputResources:
-            - name: '{{.Values.OurRepoInfo.GitResourceName | default "BeepGitResource"}}'
-              trigger: false
-          integrations:
-            - name: '{{.Values.OurImageInfo.ArtifactoryIntegration | default "BeepArtifactory"}}'
-            - name: '{{.Values.ThisPipeline.SlackNotification| default "Slack_Failures"}}'
-            - name: go_beep_github
-            - name: SlackIntegration
-          inputSteps:
-            - name: '{{.Values.ThisPipeline.VersionStep | default "VersionStep"}}'
-        execution:
-          onExecute:
-            - source /root/.sdkman/bin/sdkman-init.sh && sdk use java {{.Values.ThisPipeline.JavaJDK}}
-            - jfrog rt use BeepArtifactory
-            - cd $res_{{.Values.OurRepoInfo.GitResourceName }}_resourcePath
-            - jfrog rt gradle-config --uses-plugin --use-wrapper --repo-deploy 'gradle-local' --repo-resolve 'gradle-virtual' --server-id-resolve BeepArtifactory --server-id-deploy BeepArtifactory
-            - jfrog rt gradle build --no-daemon -x test -PprojVersion=$VERSION_NUMBER -Partifactory_contextUrl=$int_BeepArtifactory_url -Partifactory_user=$int_BeepArtifactory_user -Partifactory_password=$int_BeepArtifactory_apikey
-            - jfrog rt gradle test --no-daemon -i -PprojVersion=$VERSION_NUMBER -Partifactory_contextUrl=$int_BeepArtifactory_url -Partifactory_user=$int_BeepArtifactory_user -Partifactory_password=$int_BeepArtifactory_apikey
-            - wget {{.Values.ThisPipeline.SonarScanner}} -P /tmp
-            - unzip /tmp/{{.Values.ThisPipeline.SonarScanerFolderName}} -d /opt
-            - {{.Values.ThisPipeline.SonnarScannerBinaryPath}} -Dsonar.projectVersion=$VERSION_NUMBER
-            - jfrog rt u --build-name={{.Values.OurImageInfo.JarName}} --build-number=${VERSION_NUMBER} "build/libs/*.jar" '{{.Values.OurImageInfo.BesGradleRepo}}/{{ .Values.OurImageInfo.RepoOrgName}}/{{ .Values.OurImageInfo.JarName }}/{{ .Values.OurImageInfo.JarName }}-{{ .Values.OurImageInfo.Version }}.${run_number}.jar'
-          onFailure:
-            - send_notification {{.Values.ThisPipeline.SlackNotification | default "Slack_Failures"}}
-            - update_commit_status {{.Values.OurRepoInfo.GitResourceName | default "BeepGitResource"}} --message "Failed!" --context "Container Build"
-            - jfrog rt dl --flat bdip-generic-local/pipelines_artifacts/UserCommitSlackAlert.py ./UserCommitSlackAlert.py
-            - jfrog rt dl --flat bdip-generic-local/pipelines_artifacts/requirements.txt ./requirements.txt
-            - pip3 install -r requirements.txt
-            - python3 UserCommitSlackAlert.py {{.Values.OurRepoInfo.Path}} ${int_SlackIntegration_slackToken} ${int_go_beep_github_token}
-      # Pushes the same docker container in the previous step to the dev repo defined in the values.yml, this time with the latest tag
-      # Input Steps :
-      #               The docker push step
-      # Input Resources :
-      #               The docker image info from the previous step
-      # Integrations :
-      #                 Artifactory
-      #                 Slack
-      # Notifications for build failures are sent to slack.
-      - name: '{{.Values.ThisPipeline.ContainerBuildStepName | default "DockerContainerBuildStep"}}'
-        type: Bash
-        configuration:
-          affinityGroup: docker_group
-          runtime:
-            type: image
-            image:
-              custom:
-                name: ridebeep.jfrog.io/dev-docker-local/beep_ojdk11_ojdk17_npm18_py3_cyp
-                tag: "1.6"
-                registry: '{{.Values.OurImageInfo.ArtifactoryIntegration | default "BeepArtifactory"}}'
-                sourceRepository: dev-docker-local
-          inputSteps:
-            - name: '{{.Values.ThisPipeline.CodeBuildStepName | default "JavaBuildStep"}}'
-          integrations:
-            - name: '{{.Values.OurImageInfo.ArtifactoryIntegration | default "BeepArtifactory"}}'
-            - name: '{{.Values.ThisPipeline.SlackNotification| default "Slack_Failures"}}'
-          inputResources:
-            - name: '{{.Values.OurRepoInfo.GitResourceName | default "BeepGitResource"}}'
-              trigger: false
-          outputResources:
-            - name: '{{.Values.OurImageInfo.Latest | default "ImageLatestTagResource"}}'
-        execution:
-          onStart:
-            - cd $res_{{.Values.OurRepoInfo.GitResourceName }}_resourcePath
-            - mkdir build
-            - mkdir build/libs
-            - jfrog rt dl --flat '{{.Values.OurImageInfo.BesGradleRepo}}/{{ .Values.OurImageInfo.RepoOrgName}}/{{ .Values.OurImageInfo.JarName }}/{{ .Values.OurImageInfo.JarName }}-{{ .Values.OurImageInfo.Version }}.${run_number}.jar' ./build/libs/{{ .Values.OurImageInfo.JarName }}.jar
-          onExecute:
-            - jfrog rt use BeepArtifactory
-            - docker login -u ${int_BeepArtifactory_user} -p ${custom_BeepArtifactory_apikey} ${int_BeepArtifactory_url}
-            - cd $res_{{.Values.OurRepoInfo.GitResourceName}}_resourcePath
-            - docker buildx create --name mybuilder --use
-            - docker buildx build -f '{{.Values.OurImageInfo.DockerFile}}' --platform "linux/amd64,linux/arm64" -t {{.Values.OurImageInfo.ArtifactoryUrl}}/{{.Values.OurImageInfo.BesRepository}}/{{.Values.OurImageInfo.ContainerName}}:${VERSION_NUMBER} -t {{.Values.OurImageInfo.ArtifactoryUrl}}/{{.Values.OurImageInfo.BesRepository}}/{{.Values.OurImageInfo.ContainerName}}:latest  --label com.ridebeep.image.version=${VERSION_NUMBER} --push .
-            - add_run_variables buildStepName={{.Values.ThisPipeline.ContainerBuildStepName}}
-            - add_run_variables {{.Values.ThisPipeline.ContainerBuildStepName}}_payloadType=docker
-            - add_run_variables {{.Values.ThisPipeline.ContainerBuildStepName}}_buildNumber=${buildNumber}
-            - add_run_variables {{.Values.ThisPipeline.ContainerBuildStepName}}_buildName={{.Values.ThisPipeline.PipelineName}}
-            - add_run_variables {{.Values.ThisPipeline.ContainerBuildStepName}}_isPromoted=false
-            - add_run_variables {{.Values.ThisPipeline.ContainerBuildStepName}}_dockerImageName={{.Values.OurImageInfo.ArtifactoryUrl}}/{{.Values.OurImageInfo.BesRepository}}/{{.Values.OurImageInfo.ContainerName}}
-            - add_run_variables {{.Values.ThisPipeline.ContainerBuildStepName}}_dockerImageTag=${buildNumber}
-            - jfrog rt build-collect-env {{.Values.ThisPipeline.PipelineName}} ${buildNumber}
-            - write_output {{.Values.ThisPipeline.PipelineName}} imageTag=${buildNumber}
-            - add_run_files /tmp/jfrog/. jfrog
-          onSuccess:
-            - cd $res_{{.Values.OurRepoInfo.GitResourceName}}_resourcePath
-            - jfrog rt dl --flat bdip-generic-local/pipelines_artifacts/templateVersion.py ./templateVersion.py
-            - jfrog rt dl --flat bdip-generic-local/pipelines_artifacts/requirements.txt ./requirements.txt
-            - pip3 install -r requirements.txt
-            - python3 templateVersion.py {{.Values.OurImageInfo.BesRepository}}/{{.Values.OurImageInfo.ContainerName}}
-            - update_commit_status {{ .Values.OurRepoInfo.GitResourceName | default "BeepGitResource" }} --message "Success" --context "Container Build"
-          onFailure:
-            - send_notification {{.Values.ThisPipeline.SlackNotification | default "Slack_Failures"}}
-            - update_commit_status {{.Values.OurRepoInfo.GitResourceName | default "BeepGitResource"}} --message "Failed!" --context "Container Build"
-            - jfrog rt dl --flat bdip-generic-local/pipelines_artifacts/UserCommitSlackAlert.py ./UserCommitSlackAlert.py
-            - jfrog rt dl --flat bdip-generic-local/pipelines_artifacts/requirements.txt ./requirements.txt
-            - pip3 install -r requirements.txt
-            - python3 UserCommitSlackAlert.py {{.Values.OurImageInfo.ContainerName}}
-      # Publishes the build info
-      # Input Steps :
-      #               The docker push step
-      # Output Resources :
-      #                     The build info
-      - name: '{{.Values.ThisPipeline.ContainerBuildInfoStepName | default "ContainerBuildInfoStep"}}'
-        type: PublishBuildInfo
-        configuration:
-          chronological: true
-          forceXrayScan:    true
-          failOnScan:      true
-          affinityGroup: docker_group
-          runtime:
-            type: image
-            image:
-              custom:
-                name: ridebeep.jfrog.io/dev-docker-local/beep_ojdk11_ojdk17_npm18_py3_cyp
-                tag: "1.6"
-                registry: '{{.Values.OurImageInfo.ArtifactoryIntegration | default "BeepArtifactory"}}'
-                sourceRepository: dev-docker-local
-          inputSteps:
-            - name: '{{.Values.ThisPipeline.ContainerBuildStepName | default "DockerContainerBuildStep"}}'
-          outputResources:
-            - name: '{{.Values.ThisBuildInfo.BesBuildInfo | default "BesBuildInfoResource"}}'
-      # Pushes the same docker container in the previous step to the AWS ECR dev repo defined in the values.yml, with the latest tag
-      # Input Steps :
-      #               The docker push step
-      # Input Resources :
-      #               The docker image info from the previous step
-      # Integrations :
-      #                 AWS
-      #                 Slack
-      # Notifications for build failures are sent to slack.
-      - name: '{{.Values.ThisPipeline.ContainerPushECRBesStepName | default "DockerContainerECRPushStep"}}'
-        type: Bash
-        configuration:
-          affinityGroup: docker_group
-          runtime:
-            type: image
-            image:
-              custom:
-                name: ridebeep.jfrog.io/dev-docker-local/beep_ojdk11_ojdk17_npm18_py3_cyp
-                tag: "1.6"
-                registry: '{{.Values.OurImageInfo.ArtifactoryIntegration | default "BeepArtifactory"}}'
-                sourceRepository: dev-docker-local
-          integrations:
-            - name: '{{.Values.OurImageInfo.AWSBesIntegration}}'
-            - name: '{{.Values.ThisPipeline.SlackNotification| default "Slack_Failures"}}'
-            - name: '{{.Values.OurImageInfo.ArtifactoryIntegration | default "BeepArtifactory"}}'
-            - name: go_beep_github
-            - name: JiraBuiltInt 
-            - name: JiraCollectKeysScript
-          inputResources:
-             - name: '{{.Values.ThisBuildInfo.BesBuildInfo | default "BesBuildInfoResource"}}'
-             - name: '{{.Values.OurRepoInfo.GitResourceName | default "BeepGitResource"}}'
-               trigger: false
-        execution:
-          onStart:
-            - add_run_variables gitToken=${int_go_beep_github_token}
-            - add_run_variables jfrogToken=${int_JiraCollectKeysScript_token}
-            - add_run_variables jiraClientSecret=${int_JiraBuiltInt_token}
-          onExecute:
-            - aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin {{ .Values.OurImageInfo.BesEcrUrL}}
-            - aws ecr create-repository --repository-name {{ .Values.OurImageInfo.ContainerName}} --image-tag-mutability MUTABLE --region us-east-2 || true
-            - docker login -u ${int_BeepArtifactory_user} -p ${custom_BeepArtifactory_apikey} ${int_BeepArtifactory_url}
-            - retry_command docker pull {{.Values.OurImageInfo.ArtifactoryUrl}}/{{.Values.OurImageInfo.BesRepository}}/{{.Values.OurImageInfo.ContainerName}}:${VERSION_NUMBER}
-            - docker tag {{.Values.OurImageInfo.ArtifactoryUrl}}/{{.Values.OurImageInfo.BesRepository}}/{{.Values.OurImageInfo.ContainerName}}:${VERSION_NUMBER} {{ .Values.OurImageInfo.BesEcrUrL}}/{{ .Values.OurImageInfo.ContainerName}}:${VERSION_NUMBER}
-            - retry_command docker push {{ .Values.OurImageInfo.BesEcrUrL}}/{{ .Values.OurImageInfo.ContainerName}}:${VERSION_NUMBER}
-            - docker tag {{.Values.OurImageInfo.ArtifactoryUrl}}/{{.Values.OurImageInfo.BesRepository}}/{{.Values.OurImageInfo.ContainerName}}:${VERSION_NUMBER} {{ .Values.OurImageInfo.BesEcrUrL}}/{{ .Values.OurImageInfo.ContainerName}}:latest
-            - retry_command docker push {{ .Values.OurImageInfo.BesEcrUrL}}/{{ .Values.OurImageInfo.ContainerName}}:latest
-          onSuccess:
-            - update_commit_status {{ .Values.OurRepoInfo.GitResourceName | default "BeepGitResource" }} --message "Success" --context "Push to Bes ECRe"
-            - cd $res_{{.Values.OurRepoInfo.GitResourceName}}_resourcePath
-            - echo $buildNumber
-            - jfrog rt dl --flat bdip-generic-local/pipelines_artifacts/JiraBuildPublish.py ./JiraBuildPublish.py
-            - jfrog rt dl --flat bdip-generic-local/pipelines_artifacts/jiraCollectKeys.py ./jiraCollectKeys.py
-            - jfrog rt dl --flat bdip-generic-local/pipelines_artifacts/requirements.txt ./requirements.txt
-            - python3 JiraBuildPublish.py {{.Values.OurRepoInfo.Path}} ${VERSION_NUMBER}
-            - python3 jiraCollectKeys.py {{.Values.OurRepoInfo.Path}} ${VERSION_NUMBER} "none" "Bes"
-          onFailure:
-            - send_notification {{.Values.ThisPipeline.SlackNotification | default "Slack_Failures"}}
-            - update_commit_status {{.Values.OurRepoInfo.GitResourceName | default "BeepGitResource"}} --message "Failed!" --context "Push to Bes ECR"
+# resources:
+#   #Github connections information
+#   - name: '{{.Values.OurRepoInfo.GitResourceName | default "BeepGitResource"}}'
+#     type: GitRepo
+#     configuration:
+#       gitProvider: '{{.Values.OurRepoInfo.GitProvider}}'
+#       path: '{{.Values.OurRepoInfo.Path}}'
+#       branches:
+#         include: '{{.Values.OurRepoInfo.Branch}}'
+#       buildOn:
+#         pullRequestCreate: false
+#       files:
+#         exclude: ^(.jfrog-pipelines\/.+|.github\/.+)
+#     # Docker image in an Artifactory dev repository. This is the image built and tagged with latest.
+#   - name: '{{.Values.OurImageInfo.Latest | default "ImageLatestTagResource"}}'
+#     type: Image
+#     configuration:
+#       registry: '{{.Values.OurImageInfo.ArtifactoryIntegration | default "BeepArtifactory"}}'
+#       sourceRepository: '{{.Values.OurImageInfo.BesRepository}}'
+#       imageName: '{{.Values.OurImageInfo.ArtifactoryUrl}}/{{.Values.OurImageInfo.BesRepository}}/{{.Values.OurImageInfo.ContainerName}}'
+#       imageTag: latest
+#       autoPull: true
+#   # Build information for the image built
+#   - name: '{{.Values.ThisBuildInfo.BesBuildInfo | default "BesBuildInfoResource"}}'
+#     type: BuildInfo
+#     configuration:
+#       sourceArtifactory: '{{.Values.OurImageInfo.ArtifactoryIntegration | default "BeepArtifactory"}}'
+#       buildName: '{{.Values.ThisPipeline.ContainerBuildStepName}}'
+# pipelines:
+#   - name: '{{.Values.ThisPipeline.PipelineName | default "BESJavaDockerPipeline"}}'
+#     steps:
+#       # Sets the version
+#       # Input Resource :
+#       #                  Our Github repo
+#       # Integrations :
+#       #                 Artifactory
+#       #                 Slack
+#       # Affinity : docker_group   (this assures we can perform actions across steps in the same instances)
+#       # Notifications for build failures are sent to slack.
+#       - name: '{{.Values.ThisPipeline.VersionStep | default "VersionStep"}}'
+#         type: Bash
+#         configuration:
+#           affinityGroup: docker_group
+#           inputResources:
+#             - name: '{{.Values.OurRepoInfo.GitResourceName | default "BeepGitResource"}}'
+#           integrations:
+#             - name: '{{.Values.OurImageInfo.ArtifactoryIntegration | default "BeepArtifactory"}}'
+#             - name: '{{.Values.ThisPipeline.SlackNotification| default "Slack_Failures"}}'
+#           runtime:
+#             type: image
+#             image:
+#               custom:
+#                 name: ridebeep.jfrog.io/dev-docker-local/beep_ojdk11_ojdk17_npm18_py3_cyp
+#                 tag: "1.6"
+#                 registry: '{{.Values.OurImageInfo.ArtifactoryIntegration | default "BeepArtifactory"}}'
+#                 sourceRepository: dev-docker-local
+#         execution:
+#           onExecute:
+#             - cd $res_{{.Values.OurRepoInfo.GitResourceName }}_resourcePath
+#             - ver=`cat VERSION`
+#             - beepversion="${ver}.${JFROG_CLI_BUILD_NUMBER}"
+#             - add_run_variables VERSION_NUMBER=${beepversion}
+#             - add_run_variables buildNumber=${beepversion}
+#             - add_run_variables JFROG_CLI_BUILD_NUMBER=${beepversion}
+#             - add_run_variables buildName=${JFROG_CLI_BUILD_NAME}
+#           onFailure:
+#             - send_notification {{.Values.ThisPipeline.SlackNotification | default "Slack_Failures"}}
+#             - jfrog rt dl --flat bdip-generic-local/pipelines_artifacts/UserCommitSlackAlert.py ./UserCommitSlackAlert.py
+#             - jfrog rt dl --flat bdip-generic-local/pipelines_artifacts/requirements.txt ./requirements.txt
+#             - pip3 install -r requirements.txt
+#             - python3 UserCommitSlackAlert.py {{.Values.OurImageInfo.ContainerName}}
+#       # Builds the code and runs tests.
+#       # Input Resource :
+#       #                  Our Github repo
+#       # Integrations :
+#       #                 Artifactory
+#       #                 Slack
+#       # Affinity : docker_group   (this assures we can perform actions across steps in the same instances)
+#       # Notifications for build failures are sent to slack.
+#       - name: '{{.Values.ThisPipeline.CodeBuildStepName | default "JavaBuildStep"}}'
+#         type: Bash
+#         configuration:
+#           affinityGroup: docker_group
+#           runtime:
+#             type: image
+#             image:
+#               custom:
+#                 name: ridebeep.jfrog.io/dev-docker-local/beep_ojdk11_ojdk17_npm18_py3_cyp
+#                 tag: "1.6"
+#                 registry: '{{.Values.OurImageInfo.ArtifactoryIntegration | default "BeepArtifactory"}}'
+#                 sourceRepository: dev-docker-local
+#           environmentVariables:
+#             SONAR_TOKEN: 71ac423b2adb00e247dab02d619a4bdc2c3423db
+#           inputResources:
+#             - name: '{{.Values.OurRepoInfo.GitResourceName | default "BeepGitResource"}}'
+#               trigger: false
+#           integrations:
+#             - name: '{{.Values.OurImageInfo.ArtifactoryIntegration | default "BeepArtifactory"}}'
+#             - name: '{{.Values.ThisPipeline.SlackNotification| default "Slack_Failures"}}'
+#             - name: go_beep_github
+#             - name: SlackIntegration
+#           inputSteps:
+#             - name: '{{.Values.ThisPipeline.VersionStep | default "VersionStep"}}'
+#         execution:
+#           onExecute:
+#             - source /root/.sdkman/bin/sdkman-init.sh && sdk use java {{.Values.ThisPipeline.JavaJDK}}
+#             - jfrog rt use BeepArtifactory
+#             - cd $res_{{.Values.OurRepoInfo.GitResourceName }}_resourcePath
+#             - jfrog rt gradle-config --uses-plugin --use-wrapper --repo-deploy 'gradle-local' --repo-resolve 'gradle-virtual' --server-id-resolve BeepArtifactory --server-id-deploy BeepArtifactory
+#             - jfrog rt gradle build --no-daemon -x test -PprojVersion=$VERSION_NUMBER -Partifactory_contextUrl=$int_BeepArtifactory_url -Partifactory_user=$int_BeepArtifactory_user -Partifactory_password=$int_BeepArtifactory_apikey
+#             - jfrog rt gradle test --no-daemon -i -PprojVersion=$VERSION_NUMBER -Partifactory_contextUrl=$int_BeepArtifactory_url -Partifactory_user=$int_BeepArtifactory_user -Partifactory_password=$int_BeepArtifactory_apikey
+#             - wget {{.Values.ThisPipeline.SonarScanner}} -P /tmp
+#             - unzip /tmp/{{.Values.ThisPipeline.SonarScanerFolderName}} -d /opt
+#             - {{.Values.ThisPipeline.SonnarScannerBinaryPath}} -Dsonar.projectVersion=$VERSION_NUMBER
+#             - jfrog rt u --build-name={{.Values.OurImageInfo.JarName}} --build-number=${VERSION_NUMBER} "build/libs/*.jar" '{{.Values.OurImageInfo.BesGradleRepo}}/{{ .Values.OurImageInfo.RepoOrgName}}/{{ .Values.OurImageInfo.JarName }}/{{ .Values.OurImageInfo.JarName }}-{{ .Values.OurImageInfo.Version }}.${run_number}.jar'
+#           onFailure:
+#             - send_notification {{.Values.ThisPipeline.SlackNotification | default "Slack_Failures"}}
+#             - update_commit_status {{.Values.OurRepoInfo.GitResourceName | default "BeepGitResource"}} --message "Failed!" --context "Container Build"
+#             - jfrog rt dl --flat bdip-generic-local/pipelines_artifacts/UserCommitSlackAlert.py ./UserCommitSlackAlert.py
+#             - jfrog rt dl --flat bdip-generic-local/pipelines_artifacts/requirements.txt ./requirements.txt
+#             - pip3 install -r requirements.txt
+#             - python3 UserCommitSlackAlert.py {{.Values.OurRepoInfo.Path}} ${int_SlackIntegration_slackToken} ${int_go_beep_github_token}
+#       # Pushes the same docker container in the previous step to the dev repo defined in the values.yml, this time with the latest tag
+#       # Input Steps :
+#       #               The docker push step
+#       # Input Resources :
+#       #               The docker image info from the previous step
+#       # Integrations :
+#       #                 Artifactory
+#       #                 Slack
+#       # Notifications for build failures are sent to slack.
+#       - name: '{{.Values.ThisPipeline.ContainerBuildStepName | default "DockerContainerBuildStep"}}'
+#         type: Bash
+#         configuration:
+#           affinityGroup: docker_group
+#           runtime:
+#             type: image
+#             image:
+#               custom:
+#                 name: ridebeep.jfrog.io/dev-docker-local/beep_ojdk11_ojdk17_npm18_py3_cyp
+#                 tag: "1.6"
+#                 registry: '{{.Values.OurImageInfo.ArtifactoryIntegration | default "BeepArtifactory"}}'
+#                 sourceRepository: dev-docker-local
+#           inputSteps:
+#             - name: '{{.Values.ThisPipeline.CodeBuildStepName | default "JavaBuildStep"}}'
+#           integrations:
+#             - name: '{{.Values.OurImageInfo.ArtifactoryIntegration | default "BeepArtifactory"}}'
+#             - name: '{{.Values.ThisPipeline.SlackNotification| default "Slack_Failures"}}'
+#           inputResources:
+#             - name: '{{.Values.OurRepoInfo.GitResourceName | default "BeepGitResource"}}'
+#               trigger: false
+#           outputResources:
+#             - name: '{{.Values.OurImageInfo.Latest | default "ImageLatestTagResource"}}'
+#         execution:
+#           onStart:
+#             - cd $res_{{.Values.OurRepoInfo.GitResourceName }}_resourcePath
+#             - mkdir build
+#             - mkdir build/libs
+#             - jfrog rt dl --flat '{{.Values.OurImageInfo.BesGradleRepo}}/{{ .Values.OurImageInfo.RepoOrgName}}/{{ .Values.OurImageInfo.JarName }}/{{ .Values.OurImageInfo.JarName }}-{{ .Values.OurImageInfo.Version }}.${run_number}.jar' ./build/libs/{{ .Values.OurImageInfo.JarName }}.jar
+#           onExecute:
+#             - jfrog rt use BeepArtifactory
+#             - docker login -u ${int_BeepArtifactory_user} -p ${custom_BeepArtifactory_apikey} ${int_BeepArtifactory_url}
+#             - cd $res_{{.Values.OurRepoInfo.GitResourceName}}_resourcePath
+#             - docker buildx create --name mybuilder --use
+#             - docker buildx build -f '{{.Values.OurImageInfo.DockerFile}}' --platform "linux/amd64,linux/arm64" -t {{.Values.OurImageInfo.ArtifactoryUrl}}/{{.Values.OurImageInfo.BesRepository}}/{{.Values.OurImageInfo.ContainerName}}:${VERSION_NUMBER} -t {{.Values.OurImageInfo.ArtifactoryUrl}}/{{.Values.OurImageInfo.BesRepository}}/{{.Values.OurImageInfo.ContainerName}}:latest  --label com.ridebeep.image.version=${VERSION_NUMBER} --push .
+#             - add_run_variables buildStepName={{.Values.ThisPipeline.ContainerBuildStepName}}
+#             - add_run_variables {{.Values.ThisPipeline.ContainerBuildStepName}}_payloadType=docker
+#             - add_run_variables {{.Values.ThisPipeline.ContainerBuildStepName}}_buildNumber=${buildNumber}
+#             - add_run_variables {{.Values.ThisPipeline.ContainerBuildStepName}}_buildName={{.Values.ThisPipeline.PipelineName}}
+#             - add_run_variables {{.Values.ThisPipeline.ContainerBuildStepName}}_isPromoted=false
+#             - add_run_variables {{.Values.ThisPipeline.ContainerBuildStepName}}_dockerImageName={{.Values.OurImageInfo.ArtifactoryUrl}}/{{.Values.OurImageInfo.BesRepository}}/{{.Values.OurImageInfo.ContainerName}}
+#             - add_run_variables {{.Values.ThisPipeline.ContainerBuildStepName}}_dockerImageTag=${buildNumber}
+#             - jfrog rt build-collect-env {{.Values.ThisPipeline.PipelineName}} ${buildNumber}
+#             - write_output {{.Values.ThisPipeline.PipelineName}} imageTag=${buildNumber}
+#             - add_run_files /tmp/jfrog/. jfrog
+#           onSuccess:
+#             - cd $res_{{.Values.OurRepoInfo.GitResourceName}}_resourcePath
+#             - jfrog rt dl --flat bdip-generic-local/pipelines_artifacts/templateVersion.py ./templateVersion.py
+#             - jfrog rt dl --flat bdip-generic-local/pipelines_artifacts/requirements.txt ./requirements.txt
+#             - pip3 install -r requirements.txt
+#             - python3 templateVersion.py {{.Values.OurImageInfo.BesRepository}}/{{.Values.OurImageInfo.ContainerName}}
+#             - update_commit_status {{ .Values.OurRepoInfo.GitResourceName | default "BeepGitResource" }} --message "Success" --context "Container Build"
+#           onFailure:
+#             - send_notification {{.Values.ThisPipeline.SlackNotification | default "Slack_Failures"}}
+#             - update_commit_status {{.Values.OurRepoInfo.GitResourceName | default "BeepGitResource"}} --message "Failed!" --context "Container Build"
+#             - jfrog rt dl --flat bdip-generic-local/pipelines_artifacts/UserCommitSlackAlert.py ./UserCommitSlackAlert.py
+#             - jfrog rt dl --flat bdip-generic-local/pipelines_artifacts/requirements.txt ./requirements.txt
+#             - pip3 install -r requirements.txt
+#             - python3 UserCommitSlackAlert.py {{.Values.OurImageInfo.ContainerName}}
+#       # Publishes the build info
+#       # Input Steps :
+#       #               The docker push step
+#       # Output Resources :
+#       #                     The build info
+#       - name: '{{.Values.ThisPipeline.ContainerBuildInfoStepName | default "ContainerBuildInfoStep"}}'
+#         type: PublishBuildInfo
+#         configuration:
+#           chronological: true
+#           forceXrayScan:    true
+#           failOnScan:      true
+#           affinityGroup: docker_group
+#           runtime:
+#             type: image
+#             image:
+#               custom:
+#                 name: ridebeep.jfrog.io/dev-docker-local/beep_ojdk11_ojdk17_npm18_py3_cyp
+#                 tag: "1.6"
+#                 registry: '{{.Values.OurImageInfo.ArtifactoryIntegration | default "BeepArtifactory"}}'
+#                 sourceRepository: dev-docker-local
+#           inputSteps:
+#             - name: '{{.Values.ThisPipeline.ContainerBuildStepName | default "DockerContainerBuildStep"}}'
+#           outputResources:
+#             - name: '{{.Values.ThisBuildInfo.BesBuildInfo | default "BesBuildInfoResource"}}'
+#       # Pushes the same docker container in the previous step to the AWS ECR dev repo defined in the values.yml, with the latest tag
+#       # Input Steps :
+#       #               The docker push step
+#       # Input Resources :
+#       #               The docker image info from the previous step
+#       # Integrations :
+#       #                 AWS
+#       #                 Slack
+#       # Notifications for build failures are sent to slack.
+#       - name: '{{.Values.ThisPipeline.ContainerPushECRBesStepName | default "DockerContainerECRPushStep"}}'
+#         type: Bash
+#         configuration:
+#           affinityGroup: docker_group
+#           runtime:
+#             type: image
+#             image:
+#               custom:
+#                 name: ridebeep.jfrog.io/dev-docker-local/beep_ojdk11_ojdk17_npm18_py3_cyp
+#                 tag: "1.6"
+#                 registry: '{{.Values.OurImageInfo.ArtifactoryIntegration | default "BeepArtifactory"}}'
+#                 sourceRepository: dev-docker-local
+#           integrations:
+#             - name: '{{.Values.OurImageInfo.AWSBesIntegration}}'
+#             - name: '{{.Values.ThisPipeline.SlackNotification| default "Slack_Failures"}}'
+#             - name: '{{.Values.OurImageInfo.ArtifactoryIntegration | default "BeepArtifactory"}}'
+#             - name: go_beep_github
+#             - name: JiraBuiltInt 
+#             - name: JiraCollectKeysScript
+#           inputResources:
+#              - name: '{{.Values.ThisBuildInfo.BesBuildInfo | default "BesBuildInfoResource"}}'
+#              - name: '{{.Values.OurRepoInfo.GitResourceName | default "BeepGitResource"}}'
+#                trigger: false
+#         execution:
+#           onStart:
+#             - add_run_variables gitToken=${int_go_beep_github_token}
+#             - add_run_variables jfrogToken=${int_JiraCollectKeysScript_token}
+#             - add_run_variables jiraClientSecret=${int_JiraBuiltInt_token}
+#           onExecute:
+#             - aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin {{ .Values.OurImageInfo.BesEcrUrL}}
+#             - aws ecr create-repository --repository-name {{ .Values.OurImageInfo.ContainerName}} --image-tag-mutability MUTABLE --region us-east-2 || true
+#             - docker login -u ${int_BeepArtifactory_user} -p ${custom_BeepArtifactory_apikey} ${int_BeepArtifactory_url}
+#             - retry_command docker pull {{.Values.OurImageInfo.ArtifactoryUrl}}/{{.Values.OurImageInfo.BesRepository}}/{{.Values.OurImageInfo.ContainerName}}:${VERSION_NUMBER}
+#             - docker tag {{.Values.OurImageInfo.ArtifactoryUrl}}/{{.Values.OurImageInfo.BesRepository}}/{{.Values.OurImageInfo.ContainerName}}:${VERSION_NUMBER} {{ .Values.OurImageInfo.BesEcrUrL}}/{{ .Values.OurImageInfo.ContainerName}}:${VERSION_NUMBER}
+#             - retry_command docker push {{ .Values.OurImageInfo.BesEcrUrL}}/{{ .Values.OurImageInfo.ContainerName}}:${VERSION_NUMBER}
+#             - docker tag {{.Values.OurImageInfo.ArtifactoryUrl}}/{{.Values.OurImageInfo.BesRepository}}/{{.Values.OurImageInfo.ContainerName}}:${VERSION_NUMBER} {{ .Values.OurImageInfo.BesEcrUrL}}/{{ .Values.OurImageInfo.ContainerName}}:latest
+#             - retry_command docker push {{ .Values.OurImageInfo.BesEcrUrL}}/{{ .Values.OurImageInfo.ContainerName}}:latest
+#           onSuccess:
+#             - update_commit_status {{ .Values.OurRepoInfo.GitResourceName | default "BeepGitResource" }} --message "Success" --context "Push to Bes ECRe"
+#             - cd $res_{{.Values.OurRepoInfo.GitResourceName}}_resourcePath
+#             - echo $buildNumber
+#             - jfrog rt dl --flat bdip-generic-local/pipelines_artifacts/JiraBuildPublish.py ./JiraBuildPublish.py
+#             - jfrog rt dl --flat bdip-generic-local/pipelines_artifacts/jiraCollectKeys.py ./jiraCollectKeys.py
+#             - jfrog rt dl --flat bdip-generic-local/pipelines_artifacts/requirements.txt ./requirements.txt
+#             - python3 JiraBuildPublish.py {{.Values.OurRepoInfo.Path}} ${VERSION_NUMBER}
+#             - python3 jiraCollectKeys.py {{.Values.OurRepoInfo.Path}} ${VERSION_NUMBER} "none" "Bes"
+#           onFailure:
+#             - send_notification {{.Values.ThisPipeline.SlackNotification | default "Slack_Failures"}}
+#             - update_commit_status {{.Values.OurRepoInfo.GitResourceName | default "BeepGitResource"}} --message "Failed!" --context "Push to Bes ECR"
