@@ -1,0 +1,123 @@
+template: true
+valuesFilePath: ./values.yml
+resources:
+{{- range untilStep 0 500 1 }}
+- name: propertyBagV{{ . }}
+  type: PropertyBag
+  configuration:
+    default: -1
+{{- end }}
+pipelines:
+{{- range untilStep 0 500 1 }}
+- name: pipelineV{{ . }}
+  steps:
+    - name: first{{ . }}
+      type: Bash
+      configuration:
+        outputResources:
+          - name: propertyBagV{{ . }}
+      execution:
+        onExecute:
+          - add_run_variables imageTag1="master"
+          - add_pipeline_variables imageTag2="master"
+    - name: second{{ . }}
+      type: Bash
+      configuration:
+        inputSteps:
+          - name: first{{ . }}
+        outputResources:
+          - name: propertyBagV{{ . }}
+      execution:
+        onExecute:
+          - echo ${imageTag1}
+          - echo ${imageTag2}
+    - name: third{{ . }}
+      type: Bash
+      configuration:
+        inputSteps:
+          - name: second{{ . }}
+        outputResources:
+          - name: propertyBagV{{ . }}
+      execution:
+        onExecute:
+          - echo ${imageTag1}
+          - echo ${imageTag2}
+    - name: fourth{{ . }}
+      type: Bash
+      configuration:
+        inputSteps:
+          - name: third{{ . }}
+        outputResources:
+          - name: propertyBagV{{ . }}
+      execution:
+        onExecute:
+          - echo ${imageTag1}
+          - echo ${imageTag2}
+    - name: fifth{{ . }}
+      type: Bash
+      configuration:
+        inputSteps:
+          - name: fourth{{ . }}
+        outputResources:
+          - name: propertyBagV{{ . }}
+      execution:
+        onExecute:
+          - echo ${imageTag1}
+          - echo ${imageTag2}
+    - name: sixth{{ . }}
+      type: Bash
+      configuration:
+        inputSteps:
+          - name: fifth{{ . }}
+        outputResources:
+          - name: propertyBagV{{ . }}
+      execution:
+        onExecute:
+          - echo ${imageTag1}
+          - echo ${imageTag2}
+    - name: seventh{{ . }}
+      type: Bash
+      configuration:
+        inputSteps:
+          - name: sixth{{ . }}
+        outputResources:
+          - name: propertyBagV{{ . }}
+      execution:
+        onExecute:
+          - echo ${imageTag1}
+          - echo ${imageTag2}
+    - name: eight{{ . }}
+      type: Bash
+      configuration:
+        inputSteps:
+          - name: seventh{{ . }}
+        outputResources:
+          - name: propertyBagV{{ . }}
+      execution:
+        onExecute:
+          - echo ${imageTag1}
+          - echo ${imageTag2}
+    - name: nine{{ . }}
+      type: Bash
+      configuration:
+        inputSteps:
+          - name: eight{{ . }}
+        outputResources:
+          - name: propertyBagV{{ . }}
+      execution:
+        onExecute:
+          - echo ${imageTag1}
+          - echo ${imageTag2}
+    - name: ten{{ . }}
+      type: Bash
+      configuration:
+        inputSteps:
+          - name: nine{{ . }}
+          - name: eight{{ . }}
+        inputResources:
+          - name: propertyBagV{{ . }}
+      execution:
+        onExecute:
+          - echo ${imageTag1}
+          - echo ${imageTag2}
+{{- end }}
