@@ -1,3 +1,47 @@
 myRepo: 
   gitProvider: agrasth
   path: agrasth/test
+# OurRepoInfo:
+#   GitResourceName: "BeepGitResource"
+#   gitProvider: agrasth
+#   path: agrasth/test
+#   Branch: "main"
+
+# OurImageInfo:
+#   Latest: "ImageLatestTagResource"
+#   ArtifactoryIntegration: "BeepArtifactory"
+#   BesRepository: "example-repo"
+#   ArtifactoryUrl: "ridebeep.jfrog.io"
+#   ContainerName: "example-container"
+#   JarName: "example-jar"
+#   Version: "0.1.0"
+#   DockerFile: "Dockerfile"
+#   BesGradleRepo: "gradle-local"
+#   RepoOrgName: "com.example"
+#   BesEcrUrL: "aws_account_id.dkr.ecr.region.amazonaws.com"
+
+# ThisBuildInfo:
+#   BesBuildInfo: "BesBuildInfoResource"
+
+# ThisPipeline:
+#   PipelineName: "BESJavaDockerPipeline"
+#   VersionStep: "VersionStep"
+#   CodeBuildStepName: "JavaBuildStep"
+#   ContainerBuildStepName: "DockerContainerBuildStep"
+#   ContainerBuildInfoStepName: "ContainerBuildInfoStep"
+#   ContainerPushECRBesStepName: "DockerContainerECRPushStep"
+#   SlackNotification: "Slack_Failures"
+#   JavaJDK: "11"
+#   SonarScanner: "https://example.com/sonar-scanner.zip"
+#   SonnarScannerBinaryPath: "/opt/sonar-scanner/bin/sonar-scanner"
+#   SonarScanerFolderName: "sonar-scanner"
+
+# # Placeholder for secrets and tokens
+# secrets:
+#   SonarToken: "dummy-sonar-token"
+#   gitToken: "dummy-git-token"
+#   jfrogToken: "dummy-jfrog-token"
+#   jiraClientSecret: "dummy-jira-client-secret"
+#   SlackIntegration: "dummy-slack-integration"
+#   JiraBuiltInt: "dummy-jira-built-int"
+#   JiraCollectKeysScript: "dummy-jira-collect-keys-script"
