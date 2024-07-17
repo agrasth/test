@@ -29,12 +29,12 @@ pipelines:
               allowCustom: true
               secure: true
               default: "someValue"
-            SIGN_EXECUTABLES: |
-              {{ if eq "preRelease" "preRelease" }}
-              True
-              {{ else }}
-              False
-              {{ end }}
+            # Conditional assignment of SIGN_EXECUTABLES
+            {{ if hasPrefix "preRelease" "{{gitBranch}}" }}
+            SIGN_EXECUTABLES: "True"
+            {{ else }}
+            SIGN_EXECUTABLES: "False"
+            {{ end }}
             gitBranch: "{{gitBranch}}"
         execution:
           onExecute:
