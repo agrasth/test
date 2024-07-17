@@ -2,9 +2,9 @@ pipelines:
   - name: my_pipeline1234567
     postRun: 
       execution: 
-        onExecute: 
-          - printenv 
-          - echo "Executing Post Run"
+        # onExecute: 
+        #   - printenv 
+        #   - echo "Executing Post Run"
     configuration:
       environmentVariables:
         readOnly:
