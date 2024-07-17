@@ -30,7 +30,7 @@ pipelines:
               secure: true
               default: "someValue"
             SIGN_EXECUTABLES: |
-              {{ if hasPrefix "preRelease" (env "gitBranch") }}
+              {{ if eq "preRelease" "preRelease" }}
               True
               {{ else }}
               False
