@@ -29,6 +29,10 @@ pipelines:
               allowCustom: true
               secure: true
               default: "someValue"
+            SIGN_EXECUTABLES: "False"
+            gitBranch: "{{gitBranch}}"
         execution:
           onExecute:
             - echo "test"
+            - echo "SIGN_EXECUTABLES: ${SIGN_EXECUTABLES}"
+            - echo "gitBranch: {{gitBranch}}"
