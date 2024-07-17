@@ -16,20 +16,6 @@ pipelines:
         type: Bash
         configuration:
          environmentVariables:
-            step_env1:
-              default: step_value1
-              description: This is step_env1 description
-              values:
-                - step_value1
-                - step_value2
-                - step_value3
-              allowCustom: true
-            step_env2: step_value5
-            step_env3:
-              allowCustom: true
-              secure: true
-              default: "someValue"
-            # Conditional assignment of SIGN_EXECUTABLES
             {{ if hasPrefix "preRelease" "{{gitBranch}}" }}
             SIGN_EXECUTABLES: "True"
             {{ else }}
