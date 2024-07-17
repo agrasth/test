@@ -3,8 +3,8 @@ nodePoolProperty:
     type: Bash
   - name: pipelines_u20
     type: Bash
-  - name: pipelines_c7
-    type: Bash
+  # - name: pipelines_c7
+  #   type: Bash
   - name: pipelines_c7
     type: Bash
   - name: pipelines_w19
