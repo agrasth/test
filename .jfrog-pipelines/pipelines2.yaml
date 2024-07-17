@@ -1,7 +1,7 @@
 pipelines:
   - name: my_pipeline1234567
     postRun: 
-      execution: 
+      # execution: 
         # onExecute: 
         #   - printenv 
         #   - echo "Executing Post Run"
