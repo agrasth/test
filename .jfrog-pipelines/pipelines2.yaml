@@ -1,5 +1,10 @@
 pipelines:
   - name: my_pipeline1234567
+    postRun: 
+      execution: 
+        onExecute: 
+          - printenv 
+          - echo "Executing Post Run"
     configuration:
       environmentVariables:
         readOnly:
@@ -39,4 +44,4 @@ pipelines:
           onExecute:
             -  pwd
             - ls
-            - stepCommons_load_script create_executables.sh
+            # - stepCommons_load_script create_executables.sh
