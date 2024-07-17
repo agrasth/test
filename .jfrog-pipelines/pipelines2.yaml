@@ -34,5 +34,5 @@ pipelines:
         execution:
           onExecute:
             - echo "test"
-            - echo "SIGN_EXECUTABLES: ${SIGN_EXECUTABLES}"
-            - echo "gitBranch: {{gitBranch}}"
+            - echo ${SIGN_EXECUTABLES}
+            - echo {{gitBranch}}
