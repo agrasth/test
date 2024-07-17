@@ -1,0 +1,21 @@
+nodePoolProperty:
+  - name: pipelines_u18
+    type: Bash
+  - name: pipelines_u20
+    type: Bash
+  - name: pipelines_c7
+    type: Bash
+  - name: pipelines_c7
+    type: Bash
+  - name: pipelines_w19
+    type: Powershell
+  - name: pipelines_kubernetes_u20
+    type: Bash
+  - name: pipelines_gcp_u18
+    type: Bash
+  - name: pipelines_gcp_u20
+    type: Bash
+  - name: pipelines_gcp_c7
+    type: Bash
+  - name: pipelines_gcp_c9
+    type: Bash
