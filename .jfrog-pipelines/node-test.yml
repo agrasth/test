@@ -1,5 +1,5 @@
 template: true
-valuesFilePath: ../values.yml
+valuesFilePath: ./values2.yml
 
 pipelines:
   - name: pipelines_node_test
