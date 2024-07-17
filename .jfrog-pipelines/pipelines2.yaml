@@ -15,7 +15,7 @@ pipelines:
       - name: my_step
         type: Bash
         configuration:
-          environmentVariables:
+         environmentVariables:
             step_env1:
               default: step_value1
               description: This is step_env1 description
@@ -29,7 +29,12 @@ pipelines:
               allowCustom: true
               secure: true
               default: "someValue"
-            SIGN_EXECUTABLES: "False"
+            SIGN_EXECUTABLES: |
+              {{ if hasPrefix "preRelease" (env "gitBranch") }}
+              True
+              {{ else }}
+              False
+              {{ end }}
             gitBranch: "{{gitBranch}}"
         execution:
           onExecute:
