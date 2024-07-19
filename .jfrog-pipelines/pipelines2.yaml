@@ -1,47 +1,47 @@
-pipelines:
-  - name: my_pipeline1234567
-    postRun: 
-      execution: 
-        onExecute: 
-          - printenv 
-          - echo "Executing Post Run"
-    configuration:
-      environmentVariables:
-        readOnly:
-          env1: pipe_value1
-          env2:
-            default: pipe_value2
-            description: This is env2 description
-            values:
-              - pipe_value2
-              - pipe_value3
-              - pipe_value4
-    steps:
-      - name: my_step
-        type: Bash
-        configuration:
-          environmentVariables:
-            step_env1:
-              default: step_value1
-              description: This is step_env1 description
-              values:
-                - step_value1
-                - step_value2
-                - step_value3
-              allowCustom: true
-            step_env2: step_value5
-            step_env3:
-              allowCustom: true
-              secure: true
-              default: "someValue"
-            # Conditional assignment of SIGN_EXECUTABLES
-            {{ if hasPrefix "preRelease" "{{gitBranch}}" }}
-            SIGN_EXECUTABLES: "True"
-            {{ else }}
-            SIGN_EXECUTABLES: "False"
-            {{ end }}
-        execution:
-          onExecute:
-            -  pwd
-            - ls
-            # - stepCommons_load_script create_executables.sh
+# pipelines:
+#   - name: my_pipeline1234567
+#     postRun: 
+#       execution: 
+#         onExecute: 
+#           - printenv 
+#           - echo "Executing Post Run"
+#     configuration:
+#       environmentVariables:
+#         readOnly:
+#           env1: pipe_value1
+#           env2:
+#             default: pipe_value2
+#             description: This is env2 description
+#             values:
+#               - pipe_value2
+#               - pipe_value3
+#               - pipe_value4
+#     steps:
+#       - name: my_step
+#         type: Bash
+#         configuration:
+#           environmentVariables:
+#             step_env1:
+#               default: step_value1
+#               description: This is step_env1 description
+#               values:
+#                 - step_value1
+#                 - step_value2
+#                 - step_value3
+#               allowCustom: true
+#             step_env2: step_value5
+#             step_env3:
+#               allowCustom: true
+#               secure: true
+#               default: "someValue"
+#             # Conditional assignment of SIGN_EXECUTABLES
+#             {{ if hasPrefix "preRelease" "{{gitBranch}}" }}
+#             SIGN_EXECUTABLES: "True"
+#             {{ else }}
+#             SIGN_EXECUTABLES: "False"
+#             {{ end }}
+#         execution:
+#           onExecute:
+#             -  pwd
+#             - ls
+#             # - stepCommons_load_script create_executables.sh
