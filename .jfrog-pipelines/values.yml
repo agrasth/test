@@ -1,6 +1,6 @@
 OurRepoInfo:
   Branch: main
-  GitProvider: go_beep_github
+  GitProvider: agrasthGit
   GitResourceName: bes_aob_api_git_resource_copy
   Path: go-beep/bes-aob-api
 OurImageInfo:
