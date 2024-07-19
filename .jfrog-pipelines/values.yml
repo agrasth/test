@@ -1,0 +1,33 @@
+OurRepoInfo:
+  Branch: main
+  GitProvider: go_beep_github
+  GitResourceName: bes_aob_api_git_resource_copy
+  Path: go-beep/bes-aob-api
+OurImageInfo:
+  ArtifactoryIntegration: BeepArtifactory
+  ArtifactoryUrl: ridebeep.jfrog.io
+  AWSBesIntegration: bes_aws_ecr
+  ContainerName: bes-aob-api
+  BesEcrUrL: <aws account>.dkr.ecr.us-east-2.amazonaws.com
+  BesGradleRepo: bes-gradle-local
+  BesRepository: bes-docker-local
+  DockerFile: Dobesrfile
+  JarName: bes-aob-api
+  Latest: bes_aob_api
+  RepoOrgName: beep
+ThisBuildInfo:
+  BuildName: bes_aob_api_image
+  BesBuildInfoResource: bes_aob_api_bes_build_info
+ThisPipeline:
+  VersionStep: bes_aob_api_version_step_copy
+  CodeBuildStepName: bes_aob_api_code_build
+  ContainerBuildInfoStepName: bes_aob_api_container_build_info
+  ContainerBuildStepName: bes_aob_api_container_build
+  ContainerPushECRBesStepName: bes_aob_api_container_ecr_bes_latest_push
+  JavaJDK: 17.0.6-tem
+  PipelineName: bes_aob_api 
+  SlackNotification: Slack_Failures
+  SlackPromotion: Slack_Promotion
+  SonarScanerFolderName: sonar-scanner-cli-5.0.1.3006-linux
+  SonarScanner: https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
+  SonnarScannerBinaryPath: /opt/sonar-scanner-5.0.1.3006-linux/bin/sonar-scanner
