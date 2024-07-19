@@ -1,8 +1,8 @@
-template:
-  namespace: beep
-  name: BesJavaDockerTemplate
-  version: 1.0.3
-  development: false
+# template:
+#   namespace: beep
+#   name: BesJavaDockerTemplate
+#   version: 1.0.3
+#   development: false
 
 #All the values used in this file will come from the below yaml file.
 valuesFilePath: ./values.yml
