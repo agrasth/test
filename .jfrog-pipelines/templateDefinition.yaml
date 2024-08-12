@@ -1,5 +1,15 @@
+resources:
+  - name: resource_pipelines
+    type: GitRepo
+    configuration:
+      gitProvider: gitint #rename to your integration name
+      path: agrasth/test #rename to your repo name
+
 pipelines:
   - name: Matrix_Single_Pipeline
+    configuration:
+      inputResources:
+        - name: resource_pipelines
     steps:
       - name: matrix_example
         type: Matrix
@@ -153,3 +163,4 @@ pipelines:
             - echo "Executing matrix step on ${steplet_id}"
             - for i in {1..100}; do echo "hellohellohellohellohellohellohellohellohellohellohello" >> log.txt; done
             - cat log.txt
+
