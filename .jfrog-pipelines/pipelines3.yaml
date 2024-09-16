@@ -5,7 +5,6 @@ pipelines:
         type: Bash
         configuration:
           requiresApproval:
-            timeoutSeconds: 43200 # if not approved in this timeframe, the step will be cancelled
             approvers:
               - admin # must be a valid Artifactory user
         execution:
