@@ -1,23 +1,57 @@
+
 pipelines:
-  - name:affinityGroup_pipeline
-    configuration:
-      affinityGroup: build_steps  # Name of the affinity group
+  - name: agrasth_hello_world
     steps:
-    - name: build_step1
-      type: Bash   # You can replace 'script' with other JFrog pipeline step types
-      # script: echo "This is the first build step"
-      execution:
-        onStart:
-          - echo "This is the first build step"
-      
+      - name: first
+        type: Bash
+        configuration:
+          inputResources:
+            - name: resource_agrasthGit
+        execution:
+          onStart:
+            - echo "onStart can be used to do some setup or initialization of your dependencies to prepare for the execution."
+          onExecute:
+            - echo "onExecute is the main section where you would issue your build/test commands"
+            - jfrog --version
+            - echo "{{ .Values.namePrefix }}_repo sha is $(find_resource_variable {{ .Values.namePrefix }}_repo commitSha)"
+          onSuccess:
+            - echo "onSuccess executes if the onStart or onExecute sections completed without errors"
+          onFailure:
+            - echo "onFailure executes if either onStart or onExecute end in failure or error."
+          onComplete:
+            - echo "onComplete executes after onSuccess or onFailure"
 
-    - name: build_step2
-      type: Bash
-      configuration:
-        inputSteps:
-          - name: build_step1
-      execution:
-        onStart:
-          - echo "This is the second build step"
+      - name: variable_selection
+        type: Bash
+        configuration:
+          inputSteps:
+            - name: first
+          environmentVariables:
+            forceFail:
+              default: "false"
+              description: "set to 'true' to force the step to fail."
+              values:
+                - "false"
+                - "true"
+        execution:
+          onStart:
+            - if [ ${forceFail} == "true" ]; then exit 1; fi
+          onExecute:
+            - echo "This step will succeed"
+          onFailure:
+            - echo "step has failed."
+          onSuccess:
+            - echo "step has succeeded."
+          onComplete:
+            - echo "onComplete executes regardless of success or failure. forceFail is ${forceFail}"
 
-
+      - name: add_run_variable
+        type: Bash
+        configuration:
+          inputSteps:
+            - name: first
+        execution:
+          onStart:
+            - echo "This step will save a value to a run variable."
+          onExecute:
+            - add_run_variables step_info="runNumber $run_number, step_name $step_name, pipeline_name $pipeline_name"
