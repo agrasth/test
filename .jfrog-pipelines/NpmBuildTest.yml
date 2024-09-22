@@ -9,6 +9,7 @@ pipelines:
             - name: resource_agrasthGit
         execution:
           onStart:
+            -  docker --version
             - echo "onStart can be used to do some setup or initialization of your dependencies to prepare for the execution."
           onExecute:
             - echo "onExecute is the main section where you would issue your build/test commands"
