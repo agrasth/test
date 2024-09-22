@@ -1,15 +1,15 @@
 resources:
-  - name: resource_pipelines
+  - name: resource_agrasthGit
     type: GitRepo
     configuration:
-      gitProvider: agrasth #rename to your integration name
+      gitProvider: agrasthGit #rename to your integration name
       path: agrasth/test #rename to your repo name
 
 pipelines:
   - name: Matrix_Single_Pipeline
     configuration:
       inputResources:
-        - name: resource_pipelines
+        - name: resource_agrasthGit
     steps:
       - name: matrix_example
         type: Matrix
