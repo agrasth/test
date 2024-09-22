@@ -6,7 +6,7 @@ resources:
       path: agrasth/test #rename to your repo name
 
 pipelines:
-  - name: Matrix_Single_Pipeline
+  - name: Matrix_Single_Pipeline2
     configuration:
       inputResources:
         - name: resource_agrasthGit
