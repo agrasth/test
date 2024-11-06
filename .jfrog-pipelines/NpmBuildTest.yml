@@ -1,4 +1,3 @@
-
 pipelines:
   - name: agrasth_hello_world
     steps:
@@ -9,19 +8,19 @@ pipelines:
             - name: resource_agrasthGit
         execution:
           onStart:
-            - docker version
-            -  docker --version
-            - echo "onStart can be used to do some setup or initialization of your dependencies to prepare for the execution."
+            - add_pipeline_variables global_var="I persist across runs"
+            - add_run_variables local_var="I persist only within this run"
+            - echo "Set a pipeline variable and a run variable"
           onExecute:
             - echo "onExecute is the main section where you would issue your build/test commands"
-            - jfrog --version
-            - echo "{{ .Values.namePrefix }}_repo sha is $(find_resource_variable {{ .Values.namePrefix }}_repo commitSha)"
+            - echo "Accessing pipeline variable in 'first' step: $global_var"
+            - echo "Accessing run variable in 'first' step: $local_var"
           onSuccess:
-            - echo "onSuccess executes if the onStart or onExecute sections completed without errors"
+            - echo "onSuccess: $global_var"
           onFailure:
-            - echo "onFailure executes if either onStart or onExecute end in failure or error."
+            - echo "onFailure: $global_var"
           onComplete:
-            - echo "onComplete executes after onSuccess or onFailure"
+            - echo "onComplete: $global_var, $local_var"
 
       - name: variable_selection
         type: Bash
@@ -37,15 +36,12 @@ pipelines:
                 - "true"
         execution:
           onStart:
+            - echo "Checking scope of variables in 'variable_selection' step"
+            - echo "Pipeline variable (global_var): $global_var"
+            - echo "Run variable (local_var) should be accessible only in this run: $local_var"
             - if [ ${forceFail} == "true" ]; then exit 1; fi
           onExecute:
             - echo "This step will succeed"
-          onFailure:
-            - echo "step has failed."
-          onSuccess:
-            - echo "step has succeeded."
-          onComplete:
-            - echo "onComplete executes regardless of success or failure. forceFail is ${forceFail}"
 
       - name: add_run_variable
         type: Bash
@@ -54,6 +50,20 @@ pipelines:
             - name: first
         execution:
           onStart:
-            - echo "This step will save a value to a run variable."
+            - echo "Setting run variables in 'add_run_variable' step."
           onExecute:
             - add_run_variables step_info="runNumber $run_number, step_name $step_name, pipeline_name $pipeline_name"
+            - echo "Added run variable step_info with value: $step_info"
+
+      - name: check_scope_in_next_run
+        type: Bash
+        configuration:
+          inputSteps:
+            - name: add_run_variable
+        execution:
+          onStart:
+            - echo "Checking variables in 'check_scope_in_next_run' step."
+          onExecute:
+            - echo "Pipeline variable (global_var) accessible across runs: $global_var"
+            - echo "Run variable (local_var) should not be accessible as it was defined for only the initial run."
+            - echo "Run variable (step_info) is specific to this run and should be accessible here: $step_info"
