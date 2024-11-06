@@ -20,6 +20,7 @@ pipelines:
             - jfrog --version
             - echo "{{ .Values.namePrefix }}_repo sha is $(find_resource_variable {{ .Values.namePrefix }}_repo commitSha)"
             - echo $global_var
+            - echo $local_var
           onSuccess:
             - echo "onSuccess executes if the onStart or onExecute sections completed without errors"
           onFailure:
@@ -44,6 +45,8 @@ pipelines:
             - if [ ${forceFail} == "true" ]; then exit 1; fi
           onExecute:
             - echo "This step will succeed"
+            - echo $local_var
+            - echo $global_var
           onFailure:
             - echo "step has failed."
           onSuccess:
