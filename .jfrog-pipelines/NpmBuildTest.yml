@@ -7,12 +7,14 @@ pipelines:
         configuration:
           inputResources:
             - name: resource_agrasthGit
+          environmentVariables:
+            CHECK_ENV: "true"
         execution:
           onStart:
             - docker version
             -  docker --version
             - echo "onStart can be used to do some setup or initialization of your dependencies to prepare for the execution."
-            - add_pipeline_variables global_var="I persist across runs"
+            - add_pipeline_variables global_var="${CHECK_ENV}"
             - add_run_variables local_var="I persist only within this run"
             - echo "Set a pipeline variable and a run variable"
           onExecute:
