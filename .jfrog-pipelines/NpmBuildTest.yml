@@ -19,6 +19,7 @@ pipelines:
             - echo "onExecute is the main section where you would issue your build/test commands"
             - jfrog --version
             - echo "{{ .Values.namePrefix }}_repo sha is $(find_resource_variable {{ .Values.namePrefix }}_repo commitSha)"
+            - echo $global_var
           onSuccess:
             - echo "onSuccess executes if the onStart or onExecute sections completed without errors"
           onFailure:
