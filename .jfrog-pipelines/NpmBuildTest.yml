@@ -12,15 +12,15 @@ pipelines:
             - docker version
             -  docker --version
             - echo "onStart can be used to do some setup or initialization of your dependencies to prepare for the execution."
-            - add_pipeline_variables pipeline_var="I persist across runs"
-            - add_run_variables run_var="I persist only within this run"
+            - add_pipeline_variables global_var="I persist across runs"
+            - add_run_variables local_var="I persist only within this run"
             - echo "Set a pipeline variable and a run variable"
           onExecute:
             - echo "onExecute is the main section where you would issue your build/test commands"
             - jfrog --version
             - echo "{{ .Values.namePrefix }}_repo sha is $(find_resource_variable {{ .Values.namePrefix }}_repo commitSha)"
-            - echo $pipeline_var
-            - echo $run_var
+            - echo $global_var
+            - echo $local_var
           onSuccess:
             - echo "onSuccess executes if the onStart or onExecute sections completed without errors"
           onFailure:
@@ -45,8 +45,8 @@ pipelines:
             - if [ ${forceFail} == "true" ]; then exit 1; fi
           onExecute:
             - echo "This step will succeed"
-            - echo $pipeline_var
-            - echo $run_var
+            - echo $global_var
+            - echo $local_var
           onFailure:
             - echo "step has failed."
           onSuccess:
