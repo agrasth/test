@@ -6,16 +6,14 @@ pipelines:
         execution:
           onExecute:
             - echo 'step1'
-            - add_run_variables 'var1=a'  # Set var1 as a string
-
+            - add_run_variables 'var1=abcaaaaaakbfwhfgwefwieuhfiwuhfwoufhwoufhwugfwoufgwugfwu'
       - name: step2
         type: Bash
         configuration:
+          condition: "var1.startsWith('a') && var1.length <= 32" # Regex approximation
           inputSteps:
             - name: step1
         execution:
           onExecute:
-            - echo "Value of var1: $var1"
-            - if [[ "$var1" =~ ^[a-z]{3,32}$ ]]; then echo "Regex match succeeded"; return 0; fi
-            - echo "Regex match failed"
-            - return 1
+            - echo 'success'
+            - echo $var1
