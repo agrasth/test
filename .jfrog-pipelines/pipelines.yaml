@@ -16,9 +16,6 @@ pipelines:
         execution:
           onExecute:
             - echo "Value of var1: $var1"
-            - if [[ "$var1" =~ ^[a-z]{3,32}$ ]]; then 
-                echo "Regex match succeeded"; 
-              else 
-                echo "Regex match failed"; 
-                exit 1;  # Optionally fail the step
-              fi
+            - if [[ "$var1" =~ ^[a-z]{3,32}$ ]]; then echo "Regex match succeeded"; return 0; fi
+            - echo "Regex match failed"
+            - return 1
