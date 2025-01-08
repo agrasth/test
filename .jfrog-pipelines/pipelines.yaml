@@ -6,7 +6,7 @@ pipelines:
         execution:
           onExecute:
             - echo 'step1'
-            - add_run_variables 'var1=abc'  # Set var1 as a string
+            - add_run_variables 'var1=a'  # Set var1 as a string
 
       - name: step2
         type: Bash
