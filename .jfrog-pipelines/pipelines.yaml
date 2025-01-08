@@ -6,14 +6,15 @@ pipelines:
         execution:
           onExecute:
             - echo 'step1'
-            - add_run_variables 'var1=2'
+            - add_run_variables 'var1=abc'  # Set var1 as a string
+
       - name: step2
         type: Bash
         configuration:
-          condition: 'var1 == 1'     # Any logical boolean expression that results to a boolean
+          condition: 'var1 =~ "^[a-z]{3,32}$"'  # Use regex to check if var1 matches the pattern
           inputSteps:
             - name: step1
         execution:
           onExecute:
-            - echo 'success'
+            - echo 'Regex match succeeded'
             - echo $var1
