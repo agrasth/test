@@ -11,10 +11,14 @@ pipelines:
       - name: step2
         type: Bash
         configuration:
-          condition: 'var1 =~ "^[a-z]{3,32}$"'  # Use regex to check if var1 matches the pattern
           inputSteps:
             - name: step1
         execution:
           onExecute:
-            - echo 'Regex match succeeded'
-            - echo $var1
+            - echo "Value of var1: $var1"
+            - if [[ "$var1" =~ ^[a-z]{3,32}$ ]]; then 
+                echo "Regex match succeeded"; 
+              else 
+                echo "Regex match failed"; 
+                exit 1;  # Optionally fail the step
+              fi
