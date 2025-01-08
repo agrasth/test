@@ -6,7 +6,7 @@ pipelines:
         execution:
           onExecute:
             - echo 'step1'
-            - add_run_variables 'var1=abcaaaaaakbfwhfgwefwieuhfiwuhfwoufhwoufhwugfwoufgwugfwu'
+            - add_run_variables 'var1=1273@Bbcaaaaaakbfwhfgwefwieuhfiwuhfwoufhwoufhwugfwoufgwugfwu'
       - name: step2
         type: Bash
         configuration:
