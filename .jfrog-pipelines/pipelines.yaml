@@ -10,6 +10,10 @@ pipelines:
       - name: step2
         type: Bash
         configuration:
+          environmentVariables:
+            CHECK_ENV: "true"
+            ARTIFACTORY_DOCKER_IMAGE_TAG: "draft-7.106.0-m006"
+            ALLOW_RUN_SINGLE_STEPS: false
           condition: 'ARTIFACTORY_DOCKER_IMAGE_TAG != "" && (SHOULD_EXECUTE_SAAS_E2E == "true" || ALLOW_RUN_SINGLE_STEPS == "true")'
           inputSteps:
             - name: step1
