@@ -10,7 +10,7 @@ pipelines:
       - name: step2
         type: Bash
         configuration:
-          condition: "var1.startsWith('a') && var1.length <= 32" # Regex approximation
+          condition: 'ARTIFACTORY_DOCKER_IMAGE_TAG != ""'
           inputSteps:
             - name: step1
         execution:
