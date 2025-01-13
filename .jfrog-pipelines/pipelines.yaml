@@ -21,4 +21,6 @@ pipelines:
           onExecute:
             - echo 'success'
             - echo $var1
+            - echo $ARTIFACTORY_DOCKER_IMAGE_TAG
+            - echo $ALLOW_RUN_SINGLE_STEPS
             - echo ($ARTIFACTORY_DOCKER_IMAGE_TAG != "" && ($SHOULD_EXECUTE_SAAS_E2E == "true" || $ALLOW_RUN_SINGLE_STEPS == "true"))
